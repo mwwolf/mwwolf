@@ -10,6 +10,8 @@ derive-new = "0.5.9"
 libmww = { path = "../libmww" }
 anyhow = "1.0.40"
 async-trait = "0.1.50"
+strum = "0.21"
+strum_macros = "0.21"
 
 [dev-dependencies]
 test-case = "1.1.0"
