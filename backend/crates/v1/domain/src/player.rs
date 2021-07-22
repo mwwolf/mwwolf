@@ -3,7 +3,7 @@ use libmww::id::Id;
 use crate::{DomainError, DomainErrorKind, DomainResult};
 
 #[derive(EnumString, IntoStaticStr)]
-pub enum PlayerRole {
+pub enum PlayerKind {
     #[strum(serialize = "host")]
     Host,
     #[strum(serialize = "guest")]
@@ -36,7 +36,7 @@ impl PlayerName {
 #[derive(new, Getters)]
 pub struct Player {
     id: Id<Player>,
-    role: PlayerRole,
+    kind: PlayerKind,
     name: PlayerName,
 }
 
