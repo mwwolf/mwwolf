@@ -14,9 +14,13 @@ mod error;
 mod id;
 mod player;
 mod result;
+mod theme;
 
 pub use error::*;
 pub use id::Id;
 // use libmww::*;
+//
 pub use player::*;
+pub use theme::*;
+
 pub use result::{DomainResult, RepositoryResult};
