@@ -4,6 +4,6 @@ use crate::*;
 pub struct Vote {
     id: Id<Vote>,
     talk_id: Id<Talk>,
-    to: Id<Player>,
-    from: Id<Player>,
+    target: Id<Player>,
+    voter: Id<Player>,
 }
