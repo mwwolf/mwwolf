@@ -1,6 +1,4 @@
-use libmww::id::Id;
-
-use crate::{DomainError, DomainErrorKind, DomainResult};
+use crate::*;
 
 #[derive(EnumString, IntoStaticStr)]
 pub enum PlayerKind {
@@ -10,17 +8,11 @@ pub enum PlayerKind {
     Guest,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, NamedTupleFrom)]
 pub struct PlayerName(String);
 
-impl From<PlayerName> for String {
-    fn from(n: PlayerName) -> Self {
-        n.0
-    }
-}
-
 impl PlayerName {
-    pub fn try_new(name: impl Into<String>) -> DomainResult<PlayerName> {
+    pub fn try_new(name: impl Into<String>) -> DomainResult<Self> {
         let name = name.into();
         if name.is_empty() {
             Err(DomainError::new(
@@ -50,10 +42,5 @@ mod tests {
     #[test_case("" => Err(DomainError::new(DomainErrorKind::InvalidInput, "name should not be blank")))]
     fn player_name_try_new_test(name: &str) -> DomainResult<PlayerName> {
         PlayerName::try_new(name)
-    }
-
-    #[test_case(PlayerName("name".into()) => "name".to_string())]
-    fn player_name_into_string(player_name: PlayerName) -> String {
-        player_name.into()
     }
 }

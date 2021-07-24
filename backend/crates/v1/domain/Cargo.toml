@@ -12,6 +12,9 @@ anyhow = "1.0.40"
 async-trait = "0.1.50"
 strum = "0.21"
 strum_macros = "0.21"
+libmww_macro = { path = "../libmww_macro" }
+chrono = "0.4"
+chrono-tz = "0.5"
 
 [dev-dependencies]
 test-case = "1.1.0"
