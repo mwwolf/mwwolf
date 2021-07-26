@@ -17,6 +17,7 @@ mod error;
 mod id;
 mod player;
 mod result;
+mod selection;
 mod talk;
 mod theme;
 mod vote;
@@ -27,6 +28,7 @@ pub use id::Id;
 //
 pub use player::*;
 pub use player::*;
+pub use selection::*;
 pub use talk::*;
 pub use theme::*;
 pub use vote::*;
