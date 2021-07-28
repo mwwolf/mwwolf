@@ -7,26 +7,24 @@ pub struct SelectionService;
 
 impl SelectionService {
     pub fn selection(&self, votes: Vec<Vote>) -> Vec<Id<Player>> {
-        let counts = HashMap::<Id<Player>, usize>::new();
-        let countes_map = votes.iter().fold(counts, |mut c, vote| {
-            let cnt = c.get_mut(vote.target());
-            if let Some(cnt) = cnt {
+        let mut max_count = 1;
+        let mut counts = HashMap::<Id<Player>, usize>::new();
+        for vote in votes.iter() {
+            if let Some(cnt) = counts.get_mut(vote.target()) {
                 *cnt += 1;
+                if *cnt > max_count {
+                    max_count = *cnt;
+                }
             } else {
-                c.insert(vote.target().clone(), 1);
+                counts.insert(vote.target().clone(), 1);
             }
-            c
-        });
+        }
 
-        let mut max_count = 0;
-        let targets = Vec::with_capacity(1);
-        countes_map.iter().fold(targets, |mut t, vote| {
-            if t.is_empty() || (t.get(0).is_some() && *vote.1 >= max_count) {
-                t.push(vote.0.clone());
-                max_count = *vote.1;
-            }
-            t
-        })
+        counts
+            .into_iter()
+            .filter(|(_, c)| c == &max_count)
+            .map(|(p, _)| p)
+            .collect()
     }
 }
 
