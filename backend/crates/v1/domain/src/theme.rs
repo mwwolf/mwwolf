@@ -17,7 +17,7 @@ impl ThemeKind {
     }
 }
 
-#[derive(Debug, PartialEq, NamedTupleFrom)]
+#[derive(Debug, PartialEq, NamedTupleFrom, Clone)]
 pub struct Word(String);
 impl Word {
     pub fn try_new(word: impl Into<String>) -> DomainResult<Self> {
