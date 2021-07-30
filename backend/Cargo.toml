@@ -11,4 +11,5 @@ members = [
   "crates/v1/application/generate_graphql_schema",
   "crates/v1/di",
   "crates/v1/testmww",
+  "crates/v1/libmww_macro",
 ]

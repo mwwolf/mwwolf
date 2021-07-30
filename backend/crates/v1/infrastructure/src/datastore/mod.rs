@@ -1,7 +1,7 @@
 use anyhow::anyhow;
 use async_std::sync::Arc;
 use async_std::sync::Mutex;
-use libmww::database::Executor;
+// use libmww::database::Executor;
 use std::borrow::Borrow;
 
 use crate::*;
@@ -11,9 +11,7 @@ mod proto_api;
 use proto_api::{api, Client, FromValue, IntoEntity, Key};
 
 mod id;
-mod project;
-use id::*;
-pub use project::*;
+// use id::*;
 
 #[derive(Clone)]
 pub struct Transaction {
@@ -242,11 +240,11 @@ fn convert_datastore_error_database_error(err: proto_api::Error) -> database::Da
     database::DatabaseError::FailedOpen(err.into())
 }
 
-fn namespace_from_executor<'a>(executor: &'a Executor<Connection, Transaction>) -> &'a str {
-    match executor {
-        Executor::<Connection, Transaction>::Connection(conn) => &conn.namespace,
-        Executor::<Connection, Transaction>::Transaction(tx) => &tx.namespace,
-    }
-}
+// fn namespace_from_executor<'a>(executor: &'a Executor<Connection, Transaction>) -> &'a str {
+//     match executor {
+//         Executor::<Connection, Transaction>::Connection(conn) => &conn.namespace,
+//         Executor::<Connection, Transaction>::Transaction(tx) => &tx.namespace,
+//     }
+// }
 #[cfg(test)]
 mod tests {}
