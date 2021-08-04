@@ -31,8 +31,8 @@ pub struct Talk {
     theme_id: Id<Theme>,
     ended_at: DateTime<Tz>,
     players: Vec<Id<Player>>,
-    wolves: Group,
-    citizen: Group,
+    wolves: WolfGroup,
+    citizen: CitizenGroup,
     talk_time: TalkTime,
 }
 
@@ -42,8 +42,8 @@ impl Talk {
         theme_id: Id<Theme>,
         ended_at: DateTime<Tz>,
         players: Vec<Id<Player>>,
-        wolves: Group,
-        citizen: Group,
+        wolves: WolfGroup,
+        citizen: CitizenGroup,
         talk_time: TalkTime,
     ) -> DomainResult<Self> {
         let talk = Self {
@@ -70,6 +70,9 @@ impl Talk {
     }
 
     pub fn start(self, _: Id<Player>) -> DomainResult<Talk> {
+        // 1. wolf, citizenの組分け
+        // 2. wordの割当
+        // 3. end_atの設定
         todo!("wolvesとcitizenにプレイヤーを振り分ける")
     }
 
@@ -84,20 +87,46 @@ pub trait TalkFactory {
         theme_id: Id<Theme>,
         timelimit_min: Duration,
         player_count: usize,
-        wolves: Group,
-        citizen: Group,
+        wolves: WolfGroup,
+        citizen: CitizenGroup,
     );
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct WolfGroup(Group);
+
+impl WolfGroup {
+    pub fn new(players: Vec<Id<Player>>, count: usize, word: Word) -> Self {
+        Self(Group::new(players, count, word))
+    }
+
+    pub fn new_with_added(&self, id: Id<Player>) -> DomainResult<Self> {
+        Ok(Self(self.0.new_with_added(id)?))
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct CitizenGroup(Group);
+
+impl CitizenGroup {
+    pub fn new(players: Vec<Id<Player>>, count: usize, word: Word) -> Self {
+        Self(Group::new(players, count, word))
+    }
+
+    pub fn new_with_added(&self, id: Id<Player>) -> DomainResult<Self> {
+        Ok(Self(self.0.new_with_added(id)?))
+    }
+}
+
 #[derive(new, Getters, Clone, Debug, PartialEq)]
-pub struct Group {
+struct Group {
     players: Vec<Id<Player>>,
     count: usize,
     word: Word,
 }
 
 impl Group {
-    pub fn new_with_added(&self, id: Id<Player>) -> DomainResult<Group> {
+    fn new_with_added(&self, id: Id<Player>) -> DomainResult<Group> {
         let mut new_group = self.clone();
         new_group.players.push(id);
         Ok(new_group)
@@ -120,16 +149,16 @@ mod tests {
         Id::new("thema_1"),
         datetime(2021, 7, 30, 21, 19, 40),
         vec![Id::new("player1"), Id::new("player2")],
-        Group::new(vec![], 3, Word::try_new("Test").unwrap()),
-        Group::new(vec![], 5, Word::try_new("Test2").unwrap()),
+        WolfGroup::new(vec![], 3, Word::try_new("Test").unwrap()),
+        CitizenGroup::new(vec![], 5, Word::try_new("Test2").unwrap()),
         TalkTime::try_minutes(5).unwrap()
      => Ok(Talk{
         id: Id::new("talk_1"),
         theme_id:  Id::new("thema_1"),
         ended_at:  datetime(2021, 7, 30, 21, 19, 40),
         players:  vec![Id::new("player1"), Id::new("player2")],
-        wolves:   Group::new(vec![], 3, Word::try_new("Test").unwrap()),
-        citizen:   Group::new(vec![], 5, Word::try_new("Test2").unwrap()),
+        wolves:   WolfGroup::new(vec![], 3, Word::try_new("Test").unwrap()),
+        citizen:   CitizenGroup::new(vec![], 5, Word::try_new("Test2").unwrap()),
         talk_time:  TalkTime::try_minutes(5).unwrap(),
     }))]
     fn talk_try_new_works(
@@ -137,8 +166,8 @@ mod tests {
         theme_id: Id<Theme>,
         ended_at: DateTime<Tz>,
         players: Vec<Id<Player>>,
-        wolves: Group,
-        citizen: Group,
+        wolves: WolfGroup,
+        citizen: CitizenGroup,
         talk_time: TalkTime,
     ) -> DomainResult<Talk> {
         Talk::try_new(id, theme_id, ended_at, players, wolves, citizen, talk_time)
