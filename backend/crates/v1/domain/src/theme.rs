@@ -1,6 +1,7 @@
 use crate::*;
+use rand::prelude::*;
 
-#[derive(Debug, PartialEq, NamedTupleFrom)]
+#[derive(Debug, Clone, PartialEq, NamedTupleFrom)]
 pub struct ThemeKind(String);
 
 impl ThemeKind {
@@ -39,6 +40,24 @@ pub struct Theme {
     kind: ThemeKind,
     first: Word,
     second: Word,
+}
+
+impl Theme {
+    pub fn choice_word(&self) -> (&Word, &Word) {
+        let mut tr = rand::thread_rng();
+        self.choise_word_internal(tr.gen_range(0..=1))
+    }
+    fn choise_word_internal(&self, wolf_index: usize) -> (&Word, &Word) {
+        match wolf_index {
+            0 => (&self.first, &self.second),
+            1 => (&self.second, &self.first),
+            _ => panic!("unkown wolf index!"),
+        }
+    }
+}
+
+pub trait ThemeRepository {
+    fn find_by_kind(&self, kind: &ThemeKind) -> RepositoryResult<Vec<Theme>>;
 }
 
 #[cfg(test)]

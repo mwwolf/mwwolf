@@ -15,6 +15,7 @@ strum_macros = "0.21"
 libmww_macro = { path = "../libmww_macro" }
 chrono = "0.4"
 chrono-tz = "0.5"
+rand = "0.8.4"
 
 [dev-dependencies]
 test-case = "1.1.0"

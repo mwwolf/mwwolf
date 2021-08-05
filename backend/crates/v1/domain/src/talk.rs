@@ -23,57 +23,41 @@ impl TalkTime {
             Ok(TalkTime(Duration::minutes(talk_time)))
         }
     }
+
+    pub fn ended_at(&self) -> DateTime<Tz> {
+        todo!()
+    }
 }
 
 #[derive(new, Getters, Clone, Debug, PartialEq)]
 pub struct Talk {
     id: Id<Talk>,
+    room_id: Id<Room>,
     theme_id: Id<Theme>,
     ended_at: DateTime<Tz>,
-    players: Vec<Id<Player>>,
     wolves: WolfGroup,
     citizen: CitizenGroup,
-    talk_time: TalkTime,
 }
 
 impl Talk {
     pub fn try_new(
         id: Id<Self>,
+        room_id: Id<Room>,
         theme_id: Id<Theme>,
         ended_at: DateTime<Tz>,
-        players: Vec<Id<Player>>,
         wolves: WolfGroup,
         citizen: CitizenGroup,
-        talk_time: TalkTime,
     ) -> DomainResult<Self> {
         let talk = Self {
             id,
+            room_id,
             theme_id,
             ended_at,
-            players,
             wolves,
             citizen,
-            talk_time,
         };
         talk.validate()?;
         Ok(talk)
-    }
-
-    pub fn join(&mut self, id: Id<Player>) -> DomainResult<()> {
-        let mut new_self = self.clone();
-        // NOTE: Talkにプレイヤー数を持たせるか、Playsersの型を新たに作るか要検討.
-        // または他のドメインモデルを検討
-        new_self.players.push(id);
-        new_self.validate()?;
-        *self = new_self;
-        Ok(())
-    }
-
-    pub fn start(self, _: Id<Player>) -> DomainResult<Talk> {
-        // 1. wolf, citizenの組分け
-        // 2. wordの割当
-        // 3. end_atの設定
-        todo!("wolvesとcitizenにプレイヤーを振り分ける")
     }
 
     fn validate(&self) -> DomainResult<()> {
@@ -85,11 +69,11 @@ pub trait TalkFactory {
     fn create(
         &self,
         theme_id: Id<Theme>,
-        timelimit_min: Duration,
-        player_count: usize,
-        wolves: WolfGroup,
-        citizen: CitizenGroup,
-    );
+        room_id: Id<Room>,
+        ended_at: DateTime<Tz>,
+        wolf_group: WolfGroup,
+        citizen_group: CitizenGroup,
+    ) -> DomainResult<Talk>;
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -146,31 +130,28 @@ mod tests {
 
     #[test_case(
         Id::new("talk_1"),
+        Id::new("room_1"),
         Id::new("thema_1"),
         datetime(2021, 7, 30, 21, 19, 40),
-        vec![Id::new("player1"), Id::new("player2")],
         WolfGroup::new(vec![], 3, Word::try_new("Test").unwrap()),
-        CitizenGroup::new(vec![], 5, Word::try_new("Test2").unwrap()),
-        TalkTime::try_minutes(5).unwrap()
+        CitizenGroup::new(vec![], 5, Word::try_new("Test2").unwrap())
      => Ok(Talk{
         id: Id::new("talk_1"),
+        room_id:Id::new("room_1"),
         theme_id:  Id::new("thema_1"),
         ended_at:  datetime(2021, 7, 30, 21, 19, 40),
-        players:  vec![Id::new("player1"), Id::new("player2")],
         wolves:   WolfGroup::new(vec![], 3, Word::try_new("Test").unwrap()),
         citizen:   CitizenGroup::new(vec![], 5, Word::try_new("Test2").unwrap()),
-        talk_time:  TalkTime::try_minutes(5).unwrap(),
     }))]
     fn talk_try_new_works(
         id: Id<Talk>,
+        room_id: Id<Room>,
         theme_id: Id<Theme>,
         ended_at: DateTime<Tz>,
-        players: Vec<Id<Player>>,
         wolves: WolfGroup,
         citizen: CitizenGroup,
-        talk_time: TalkTime,
     ) -> DomainResult<Talk> {
-        Talk::try_new(id, theme_id, ended_at, players, wolves, citizen, talk_time)
+        Talk::try_new(id, room_id, theme_id, ended_at, wolves, citizen)
     }
 
     #[test_case(1 => Ok(TalkTime(Duration::minutes(1))))]
