@@ -65,11 +65,13 @@ impl Talk {
     }
 }
 
+#[cfg_attr(test, automock)]
+#[async_trait]
 pub trait TalkFactory {
-    fn create(
+    async fn create(
         &self,
-        theme_id: Id<Theme>,
         room_id: Id<Room>,
+        theme_id: Id<Theme>,
         ended_at: DateTime<Tz>,
         wolf_group: WolfGroup,
         citizen_group: CitizenGroup,

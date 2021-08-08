@@ -56,8 +56,10 @@ impl Theme {
     }
 }
 
+#[cfg_attr(test, automock)]
+#[async_trait]
 pub trait ThemeRepository {
-    fn find_by_kind(&self, kind: &ThemeKind) -> RepositoryResult<Vec<Theme>>;
+    async fn find_by_kind(&self, kind: &ThemeKind) -> RepositoryResult<Vec<Theme>>;
 }
 
 #[cfg(test)]

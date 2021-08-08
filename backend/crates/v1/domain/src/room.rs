@@ -28,6 +28,7 @@ pub trait RoomServiceTypeParameters {
     type DateTimeGen: time::DateTimeGen;
 }
 
+#[derive(new)]
 pub struct RoomService<RST: RoomServiceTypeParameters> {
     talk_factory: RST::TalkFactory,
     theme_repository: RST::ThemeRepository,
@@ -35,8 +36,8 @@ pub struct RoomService<RST: RoomServiceTypeParameters> {
 }
 
 impl<RST: RoomServiceTypeParameters> RoomService<RST> {
-    pub fn start_talk(&self, room: &Room) -> DomainResult<Talk> {
-        match self.theme_repository.find_by_kind(room.theme_kind()) {
+    pub async fn start_talk(&self, room: &Room) -> DomainResult<Talk> {
+        match self.theme_repository.find_by_kind(room.theme_kind()).await {
             Ok(themes) => {
                 let theme = themes.choose(&mut rand::thread_rng()).unwrap();
                 let mut all_players = room.all_players().clone();
@@ -56,13 +57,15 @@ impl<RST: RoomServiceTypeParameters> RoomService<RST> {
                 );
                 let ended_at = room.talk_time().calc_ended_at(&self.date_time_gen.now());
 
-                self.talk_factory.create(
-                    theme.id().clone(),
-                    room.id().clone(),
-                    ended_at,
-                    wolf_group,
-                    citizen_group,
-                )
+                self.talk_factory
+                    .create(
+                        room.id().clone(),
+                        theme.id().clone(),
+                        ended_at,
+                        wolf_group,
+                        citizen_group,
+                    )
+                    .await
             }
             Err(err) => Err(DomainError::new_with_source(
                 DomainErrorKind::Fail,
@@ -73,5 +76,44 @@ impl<RST: RoomServiceTypeParameters> RoomService<RST> {
                 err.into(),
             )),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::*;
+    use chrono_tz::*;
+
+    fn room_start_talk_works(room: Room, now: DateTime<Tz>) -> DomainResult<Talk> {
+        let date_time_gen = time::MockDateTimeGen::new();
+        date_time_gen.expected_now().returning(|| now);
+        let mut mock_talk_factory = MockTalkFactory::new();
+        mock_talk_factory.expect_create().returning(
+            |room_id, theme_id, ended_at, wolf_group, citizen_group| {
+                Ok(Talk::new(
+                    Id::new("theme1"),
+                    room_id,
+                    theme_id,
+                    ended_at,
+                    wolf_group,
+                    citizen_group,
+                ))
+            },
+        );
+        let mut mock_theme_repository = MockThemeRepository::new();
+        mock_theme_repository
+            .expect_find_by_kind()
+            .with(eq(room.theme_kind))
+            .returning(|kind| {
+                Ok(vec![Theme::new(
+                    Id::new("theme1"),
+                    kind.clone(),
+                    Word::try_new("hoge").unwrap(),
+                    Word::try_new("foo").unwrap(),
+                )])
+            });
+
+        todo!()
     }
 }

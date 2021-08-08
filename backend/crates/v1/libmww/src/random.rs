@@ -1,12 +1,12 @@
 use rand::RngCore;
 
-#[cfg(not(test))]
+#[cfg(not(feature = "test"))]
 pub use not_test::*;
 
-#[cfg(test)]
+#[cfg(feature = "test")]
 pub use mock::*;
 
-#[cfg(not(test))]
+#[cfg(not(feature = "test"))]
 mod not_test {
     use super::*;
 
@@ -20,7 +20,7 @@ mod not_test {
     }
 }
 
-#[cfg(test)]
+#[cfg(feature = "test")]
 mod mock {
     use super::*;
     use derive_new::new;

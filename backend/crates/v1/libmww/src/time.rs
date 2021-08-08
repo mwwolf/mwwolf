@@ -1,9 +1,9 @@
+#[cfg(feature = "test")]
+use crate::*;
 use chrono::{DateTime, Utc};
 use chrono_tz::Tz;
-#[cfg(test)]
-use mockall::{automock, predicate::*};
 
-#[cfg_attr(test, automock)]
+#[cfg_attr(feature = "test", automock)]
 pub trait DateTimeGen {
     fn now(&self) -> DateTime<Tz>;
 }
