@@ -6,26 +6,26 @@ use chrono_tz::Tz;
 pub struct TalkTime(Duration);
 
 impl TalkTime {
-    const DEFAULT_MAX_LIMIT: i64 = 60;
-    const DEFAULT_MIN_LIMIT: i64 = 1;
-    pub fn try_minutes(talk_time: i64) -> DomainResult<TalkTime> {
-        if !(Self::DEFAULT_MIN_LIMIT..=Self::DEFAULT_MAX_LIMIT).contains(&talk_time) {
+    const DEFAULT_MAX_LIMIT: u32 = 60;
+    const DEFAULT_MIN_LIMIT: u32 = 1;
+    pub fn try_new(talk_time_minutes: u32) -> DomainResult<TalkTime> {
+        if !(Self::DEFAULT_MIN_LIMIT..=Self::DEFAULT_MAX_LIMIT).contains(&talk_time_minutes) {
             Err(DomainError::new(
                 DomainErrorKind::InvalidInput,
                 format!(
                     "{} is outside of limits. the range are min:{} ~ max:{}",
-                    talk_time,
+                    talk_time_minutes,
                     Self::DEFAULT_MIN_LIMIT,
                     Self::DEFAULT_MAX_LIMIT
                 ),
             ))
         } else {
-            Ok(TalkTime(Duration::minutes(talk_time)))
+            Ok(TalkTime(Duration::minutes(talk_time_minutes as i64)))
         }
     }
 
-    pub fn ended_at(&self) -> DateTime<Tz> {
-        todo!()
+    pub fn calc_ended_at(&self, started_at: &DateTime<Tz>) -> DateTime<Tz> {
+        *started_at + self.0
     }
 }
 
@@ -164,7 +164,24 @@ mod tests {
                 DomainErrorKind::InvalidInput,
                 "61 is outside of limits. the range are min:1 ~ max:60",
             )))]
-    fn talk_time_try_minutes_works(minutes: i64) -> DomainResult<TalkTime> {
-        TalkTime::try_minutes(minutes)
+    fn talk_time_try_minutes_works(minutes: u32) -> DomainResult<TalkTime> {
+        TalkTime::try_new(minutes)
+    }
+
+    #[test_case(
+        TalkTime::try_new(3).unwrap(),
+        datetime(2021,3,4,2,30,0)
+        => datetime(2021,3,4,2,33,0)
+        )]
+    #[test_case(
+        TalkTime::try_new(5).unwrap(),
+        datetime(2021,3,4,2,0,0)
+        => datetime(2021,3,4,2,5,0)
+        )]
+    fn talk_time_calc_ended_at_works(
+        talk_time: TalkTime,
+        started_at: DateTime<Tz>,
+    ) -> DateTime<Tz> {
+        talk_time.calc_ended_at(&started_at)
     }
 }

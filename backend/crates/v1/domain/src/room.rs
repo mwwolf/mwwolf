@@ -1,5 +1,6 @@
 use crate::*;
 use rand::prelude::*;
+use time::DateTimeGen;
 
 #[derive(Clone, Debug, PartialEq, new, Getters)]
 pub struct MaxPlayerCount {
@@ -21,12 +22,19 @@ pub struct Room {
     theme_kind: ThemeKind,
 }
 
-pub struct RoomService<TF: TalkFactory, TR: ThemeRepository> {
-    talk_factory: TF,
-    theme_repository: TR,
+pub trait RoomServiceTypeParameters {
+    type TalkFactory: TalkFactory;
+    type ThemeRepository: ThemeRepository;
+    type DateTimeGen: time::DateTimeGen;
 }
 
-impl<TF: TalkFactory, TR: ThemeRepository> RoomService<TF, TR> {
+pub struct RoomService<RST: RoomServiceTypeParameters> {
+    talk_factory: RST::TalkFactory,
+    theme_repository: RST::ThemeRepository,
+    date_time_gen: RST::DateTimeGen,
+}
+
+impl<RST: RoomServiceTypeParameters> RoomService<RST> {
     pub fn start_talk(&self, room: &Room) -> DomainResult<Talk> {
         match self.theme_repository.find_by_kind(room.theme_kind()) {
             Ok(themes) => {
@@ -46,7 +54,7 @@ impl<TF: TalkFactory, TR: ThemeRepository> RoomService<TF, TR> {
                     room.all_players().len() - raw_wolf_count,
                     citizen_word.clone(),
                 );
-                let ended_at = room.talk_time().ended_at();
+                let ended_at = room.talk_time().calc_ended_at(&self.date_time_gen.now());
 
                 self.talk_factory.create(
                     theme.id().clone(),
