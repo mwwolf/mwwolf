@@ -5,6 +5,7 @@ use chrono_tz::Tz;
 #[derive(Clone, Debug, PartialEq)]
 pub struct TalkTime(Duration);
 
+// TODO(ryutah): rename to TalkMinutes
 impl TalkTime {
     const DEFAULT_MAX_LIMIT: u32 = 60;
     const DEFAULT_MIN_LIMIT: u32 = 1;
@@ -82,8 +83,8 @@ pub trait TalkFactory {
 pub struct WolfGroup(Group);
 
 impl WolfGroup {
-    pub fn new(players: Vec<Id<Player>>, count: usize, word: Word) -> Self {
-        Self(Group::new(players, count, word))
+    pub fn new(players: Vec<Id<Player>>, word: Word) -> Self {
+        Self(Group::new(players, word))
     }
 
     pub fn new_with_added(&self, id: Id<Player>) -> DomainResult<Self> {
@@ -95,8 +96,8 @@ impl WolfGroup {
 pub struct CitizenGroup(Group);
 
 impl CitizenGroup {
-    pub fn new(players: Vec<Id<Player>>, count: usize, word: Word) -> Self {
-        Self(Group::new(players, count, word))
+    pub fn new(players: Vec<Id<Player>>, word: Word) -> Self {
+        Self(Group::new(players, word))
     }
 
     pub fn new_with_added(&self, id: Id<Player>) -> DomainResult<Self> {
@@ -107,7 +108,6 @@ impl CitizenGroup {
 #[derive(new, Getters, Clone, Debug, PartialEq)]
 struct Group {
     players: Vec<Id<Player>>,
-    count: usize,
     word: Word,
 }
 
@@ -135,15 +135,15 @@ mod tests {
         Id::new("room_1"),
         Id::new("thema_1"),
         datetime(2021, 7, 30, 21, 19, 40),
-        WolfGroup::new(vec![], 3, Word::try_new("Test").unwrap()),
-        CitizenGroup::new(vec![], 5, Word::try_new("Test2").unwrap())
+        WolfGroup::new(vec![], Word::try_new("Test").unwrap()),
+        CitizenGroup::new(vec![], Word::try_new("Test2").unwrap())
      => Ok(Talk{
         id: Id::new("talk_1"),
         room_id:Id::new("room_1"),
         theme_id:  Id::new("thema_1"),
         ended_at:  datetime(2021, 7, 30, 21, 19, 40),
-        wolves:   WolfGroup::new(vec![], 3, Word::try_new("Test").unwrap()),
-        citizen:   CitizenGroup::new(vec![], 5, Word::try_new("Test2").unwrap()),
+        wolves:   WolfGroup::new(vec![], Word::try_new("Test").unwrap()),
+        citizen:   CitizenGroup::new(vec![], Word::try_new("Test2").unwrap()),
     }))]
     fn talk_try_new_works(
         id: Id<Talk>,
