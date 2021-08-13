@@ -1,5 +1,6 @@
 use crate::*;
 use rand::prelude::*;
+use std::cell::RefCell;
 use time::DateTimeGen;
 
 #[derive(Clone, Debug, PartialEq, new, Getters)]
@@ -26,6 +27,7 @@ pub trait RoomServiceTypeParameters {
     type TalkFactory: TalkFactory;
     type ThemeRepository: ThemeRepository;
     type DateTimeGen: time::DateTimeGen;
+    type RngCore: rand::RngCore;
 }
 
 #[derive(new)]
@@ -33,17 +35,16 @@ pub struct RoomService<RST: RoomServiceTypeParameters> {
     talk_factory: RST::TalkFactory,
     theme_repository: RST::ThemeRepository,
     date_time_gen: RST::DateTimeGen,
-    random_factory: random::RngCoreFactory,
+    rng_core: RefCell<RST::RngCore>,
 }
 
 impl<RST: RoomServiceTypeParameters> RoomService<RST> {
     pub async fn start_talk(&self, room: &Room) -> DomainResult<Talk> {
         match self.theme_repository.find_by_kind(room.theme_kind()).await {
             Ok(themes) => {
-                let mut tr = self.random_factory.create();
-                let theme = themes.choose(&mut tr).unwrap();
+                let theme = themes.choose(&mut *self.rng_core.borrow_mut()).unwrap();
                 let mut all_players = room.all_players().clone();
-                all_players.shuffle(&mut tr);
+                all_players.shuffle(&mut *self.rng_core.borrow_mut());
                 let wolfs = all_players
                     .drain(0..*room.wolf_count().raw_count())
                     .collect::<Vec<Id<Player>>>();
@@ -80,6 +81,8 @@ mod tests {
     use super::*;
     use chrono::*;
     use chrono_tz::*;
+    use rand::rngs::mock::StepRng;
+    use testmww::mock::mock_libmww::time;
 
     fn datetime(year: i32, month: u32, day: u32, hour: u32, min: u32, sec: u32) -> DateTime<Tz> {
         chrono_tz::Japan
@@ -93,6 +96,7 @@ mod tests {
         type ThemeRepository = MockThemeRepository;
         type TalkFactory = MockTalkFactory;
         type DateTimeGen = time::MockDateTimeGen;
+        type RngCore = rand::rngs::mock::StepRng;
     }
 
     #[test_case(
@@ -101,7 +105,7 @@ mod tests {
             MaxPlayerCount::new(5),
             WolfCount::new(2),
             Id::new("player1"),
-            vec![Id::new("player1"), Id::new("player2")],
+            vec![Id::new("player1"), Id::new("player2"),Id::new("player3"),Id::new("player4"),Id::new("player5")],
             TalkTime::try_new(5).unwrap(),
             ThemeKind::try_new("theme_kind1").unwrap(),
         ),
@@ -113,8 +117,8 @@ mod tests {
                 Id::new("room1"),
                 Id::new("theme1"),
                 datetime(2021, 8, 11, 12, 35, 15),
-                WolfGroup::new(vec![Id::new("player1")], Word::try_new("hoge").unwrap()),
-                CitizenGroup::new(vec![Id::new("player2")], Word::try_new("foo").unwrap()),
+                WolfGroup::new(vec![Id::new("player2"),Id::new("player3")], Word::try_new("hoge").unwrap()),
+                CitizenGroup::new(vec![Id::new("player4"),Id::new("player5"),Id::new("player1")], Word::try_new("foo").unwrap()),
             ).unwrap()
         ) ; "max_players_is_5_and_given_2players"
     )]
@@ -154,7 +158,7 @@ mod tests {
             mock_talk_factory,
             mock_theme_repository,
             mock_date_time_gen,
-            random::RngCoreFactory::new(1, 1),
+            RefCell::new(StepRng::new(0, 1)),
         );
         room_service.start_talk(&room).await
     }
