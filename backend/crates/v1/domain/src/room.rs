@@ -21,6 +21,18 @@ impl PlayerCount {
     }
 }
 
+impl PartialOrd<WolfCount> for PlayerCount {
+    fn partial_cmp(&self, other: &WolfCount) -> Option<std::cmp::Ordering> {
+        self.raw_player_count().partial_cmp(other.raw_count())
+    }
+}
+
+impl PartialEq<WolfCount> for PlayerCount {
+    fn eq(&self, other: &WolfCount) -> bool {
+        self.raw_player_count() == other.raw_count()
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Getters)]
 pub struct WolfCount {
     raw_count: usize,
@@ -41,13 +53,48 @@ impl WolfCount {
 
 #[derive(Getters, new, Clone, Debug, PartialEq)]
 pub struct Room {
-    id: Id<Room>,
+    id: Id<Self>,
     player_count: PlayerCount,
     wolf_count: WolfCount,
     host_player_id: Id<Player>,
     all_players: Vec<Id<Player>>,
     talk_time: TalkTime,
     theme_kind: ThemeKind,
+}
+
+impl Room {
+    pub fn try_new(
+        id: Id<Self>,
+        player_count: PlayerCount,
+        wolf_count: WolfCount,
+        host_player_id: Id<Player>,
+        all_players: Vec<Id<Player>>,
+        talk_time: TalkTime,
+        theme_kind: ThemeKind,
+    ) -> DomainResult<Self> {
+        let room = Room {
+            id,
+            player_count,
+            wolf_count,
+            host_player_id,
+            all_players,
+            talk_time,
+            theme_kind,
+        };
+        room.validate()?;
+        Ok(room)
+    }
+
+    fn validate(&self) -> DomainResult<()> {
+        if self.player_count() <= self.wolf_count() {
+            Err(DomainError::new(
+                DomainErrorKind::InvalidInput,
+                "player_count must be bigger than wold count",
+            ))
+        } else {
+            Ok(())
+        }
+    }
 }
 
 pub trait RoomServiceTypeParameters {
@@ -202,5 +249,74 @@ mod tests {
     #[test_case(100 => Ok(PlayerCount{ raw_player_count: 100 }))]
     fn player_count_try_new_works(raw_player_count: usize) -> DomainResult<PlayerCount> {
         PlayerCount::try_new(raw_player_count)
+    }
+
+    #[test_case(
+        Id::new("romm1"),
+        PlayerCount::try_new(5).unwrap(),
+        WolfCount::try_new(4).unwrap(),
+        Id::new("player1"),
+        vec![],
+        TalkTime::try_new(3).unwrap(),
+        ThemeKind::try_new("theme1").unwrap()
+        =>
+        Ok(Room {
+            id: Id::new("romm1"),
+            player_count: PlayerCount::try_new(5).unwrap(),
+            wolf_count: WolfCount::try_new(4).unwrap(),
+            host_player_id: Id::new("player1"),
+            all_players: vec![],
+            talk_time: TalkTime::try_new(3).unwrap(),
+            theme_kind: ThemeKind::try_new("theme1").unwrap(),
+        })
+    )]
+    #[test_case(
+        Id::new("romm2"),
+        PlayerCount::try_new(6).unwrap(),
+        WolfCount::try_new(5).unwrap(),
+        Id::new("player2"),
+        vec![],
+        TalkTime::try_new(4).unwrap(),
+        ThemeKind::try_new("theme2").unwrap()
+        =>
+        Ok(Room {
+            id: Id::new("romm2"),
+            player_count: PlayerCount::try_new(6).unwrap(),
+            wolf_count: WolfCount::try_new(5).unwrap(),
+            host_player_id: Id::new("player2"),
+            all_players: vec![],
+            talk_time: TalkTime::try_new(4).unwrap(),
+            theme_kind: ThemeKind::try_new("theme2").unwrap(),
+        })
+    )]
+    #[test_case(
+        Id::new("romm2"),
+        PlayerCount::try_new(5).unwrap(),
+        WolfCount::try_new(5).unwrap(),
+        Id::new("player2"),
+        vec![],
+        TalkTime::try_new(4).unwrap(),
+        ThemeKind::try_new("theme2").unwrap()
+        =>
+        Err(DomainError::new(DomainErrorKind::InvalidInput, "player_count must be bigger than wold count"))
+    )]
+    fn room_try_new_works(
+        id: Id<Room>,
+        player_count: PlayerCount,
+        wolf_count: WolfCount,
+        host_player_id: Id<Player>,
+        all_players: Vec<Id<Player>>,
+        talk_time: TalkTime,
+        theme_kind: ThemeKind,
+    ) -> DomainResult<Room> {
+        Room::try_new(
+            id,
+            player_count,
+            wolf_count,
+            host_player_id,
+            all_players,
+            talk_time,
+            theme_kind,
+        )
     }
 }
