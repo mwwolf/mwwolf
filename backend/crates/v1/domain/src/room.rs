@@ -51,7 +51,7 @@ impl WolfCount {
     }
 }
 
-#[derive(Getters, new, Clone, Debug, PartialEq)]
+#[derive(Getters, Clone, Debug, PartialEq)]
 pub struct Room {
     id: Id<Self>,
     player_count: PlayerCount,
@@ -174,7 +174,7 @@ mod tests {
     }
 
     #[test_case(
-        Room::new(
+        Room::try_new(
             Id::new("room1"),
             PlayerCount::try_new(5).unwrap(),
             WolfCount::try_new(2).unwrap(),
@@ -182,7 +182,7 @@ mod tests {
             vec![Id::new("player1"), Id::new("player2"),Id::new("player3"),Id::new("player4"),Id::new("player5")],
             TalkTime::try_new(5).unwrap(),
             ThemeKind::try_new("theme_kind1").unwrap(),
-        ),
+        ).unwrap(),
         datetime(2021, 8, 11, 12, 30, 15)
         =>
         Ok(
@@ -195,6 +195,29 @@ mod tests {
                 CitizenGroup::new(vec![Id::new("player4"),Id::new("player5"),Id::new("player1")], Word::try_new("hoge").unwrap()),
             ).unwrap()
         ) ; "max_players_is_5_and_given_2players"
+    )]
+    #[test_case(
+        Room::try_new(
+            Id::new("room2"),
+            PlayerCount::try_new(6).unwrap(),
+            WolfCount::try_new(3).unwrap(),
+            Id::new("player2"),
+            vec![Id::new("player2"), Id::new("player3"),Id::new("player4"),Id::new("player5"),Id::new("player6"), Id::new("player7")],
+            TalkTime::try_new(6).unwrap(),
+            ThemeKind::try_new("theme_kind2").unwrap(),
+        ).unwrap(),
+        datetime(2022, 8, 11, 12, 30, 15)
+        =>
+        Ok(
+            Talk::try_new(
+                Id::new("talk1"),
+                Id::new("room2"),
+                Id::new("theme1"),
+                datetime(2022, 8, 11, 12, 36, 15),
+                WolfGroup::new(vec![Id::new("player3"),Id::new("player4"),Id::new("player5")], Word::try_new("foo").unwrap()),
+                CitizenGroup::new(vec![Id::new("player6"),Id::new("player7"),Id::new("player2")], Word::try_new("hoge").unwrap()),
+            ).unwrap()
+        ) ; "max_players_is_6_and_given_3players"
     )]
     #[async_std::test]
     async fn room_start_talk_works(room: Room, now: DateTime<Tz>) -> DomainResult<Talk> {
