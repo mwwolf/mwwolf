@@ -43,19 +43,16 @@ pub struct Theme {
 }
 
 impl Theme {
-    pub fn choice_word(&self) -> (&Word, &Word) {
-        let mut tr = rand::thread_rng();
-        self.choise_word_internal(tr.gen_range(0..=1))
-    }
-    fn choise_word_internal(&self, wolf_index: usize) -> (&Word, &Word) {
-        match wolf_index {
-            0 => (&self.first, &self.second),
-            1 => (&self.second, &self.first),
-            _ => panic!("unkown wolf index!"),
+    pub fn choice_word(&self, rng: &mut impl RngCore) -> (&Word, &Word) {
+        if rng.gen() {
+            (&self.first, &self.second)
+        } else {
+            (&self.second, &self.first)
         }
     }
 }
 
+// TODO(ryutah): automock should be move to testmww
 #[cfg_attr(test, automock)]
 #[async_trait]
 pub trait ThemeRepository {
@@ -83,5 +80,30 @@ mod tests {
             )))]
     fn word_try_new_works(word: impl Into<String>) -> DomainResult<Word> {
         Word::try_new(word)
+    }
+
+    #[test_case(
+        Theme::new(
+            Id::new("theme1"),
+            ThemeKind::try_new("test").unwrap(),
+            Word::try_new("foo").unwrap(),
+            Word::try_new("bar").unwrap(),
+        ), rand::rngs::mock::StepRng::new(0, 1)
+        =>
+        (Word::try_new("bar").unwrap(), Word::try_new("foo").unwrap())
+    )]
+    #[test_case(
+        Theme::new(
+            Id::new("theme1"),
+            ThemeKind::try_new("test").unwrap(),
+            Word::try_new("foo2").unwrap(),
+            Word::try_new("bar2").unwrap(),
+        ), rand::rngs::mock::StepRng::new(1, 0)
+        =>
+        (Word::try_new("bar2").unwrap(), Word::try_new("foo2").unwrap())
+    )]
+    fn theme_choose_word_works(theme: Theme, mut rng: rand::rngs::mock::StepRng) -> (Word, Word) {
+        let (word1, word2) = theme.choice_word(&mut rng);
+        (word1.clone(), word2.clone())
     }
 }
