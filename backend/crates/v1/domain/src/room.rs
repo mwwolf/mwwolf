@@ -3,19 +3,46 @@ use rand::prelude::*;
 use std::cell::RefCell;
 use time::DateTimeGen;
 
-#[derive(Clone, Debug, PartialEq, new, Getters)]
-pub struct MaxPlayerCount {
-    raw_max_player_count: usize,
+#[derive(Clone, Debug, PartialEq, Getters)]
+pub struct PlayerCount {
+    raw_player_count: usize,
 }
-#[derive(Clone, Debug, PartialEq, new, Getters)]
+
+impl PlayerCount {
+    pub fn try_new(raw_player_count: usize) -> DomainResult<Self> {
+        if raw_player_count == 0 {
+            Err(DomainError::new(
+                DomainErrorKind::InvalidInput,
+                "raw_player_count should not be zero",
+            ))
+        } else {
+            Ok(Self { raw_player_count })
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Getters)]
 pub struct WolfCount {
     raw_count: usize,
+}
+
+impl WolfCount {
+    pub fn try_new(raw_count: usize) -> DomainResult<Self> {
+        if raw_count == 0 {
+            Err(DomainError::new(
+                DomainErrorKind::InvalidInput,
+                "raw_count should not be zero",
+            ))
+        } else {
+            Ok(Self { raw_count })
+        }
+    }
 }
 
 #[derive(Getters, new, Clone, Debug, PartialEq)]
 pub struct Room {
     id: Id<Room>,
-    max_player_count: MaxPlayerCount,
+    player_count: PlayerCount,
     wolf_count: WolfCount,
     host_player_id: Id<Player>,
     all_players: Vec<Id<Player>>,
@@ -49,7 +76,7 @@ impl<RST: RoomServiceTypeParameters> RoomService<RST> {
                     .drain(0..*room.wolf_count().raw_count())
                     .collect::<Vec<Id<Player>>>();
                 let citizen = all_players;
-                let (wolf_word, citizen_word) = theme.choice_word();
+                let (wolf_word, citizen_word) = theme.choice_word(&mut *self.rng_core.borrow_mut());
                 let wolf_group = WolfGroup::new(wolfs, wolf_word.clone());
                 let citizen_group = CitizenGroup::new(citizen, citizen_word.clone());
                 let ended_at = room.talk_time().calc_ended_at(&self.date_time_gen.now());
@@ -102,8 +129,8 @@ mod tests {
     #[test_case(
         Room::new(
             Id::new("room1"),
-            MaxPlayerCount::new(5),
-            WolfCount::new(2),
+            PlayerCount::try_new(5).unwrap(),
+            WolfCount::try_new(2).unwrap(),
             Id::new("player1"),
             vec![Id::new("player1"), Id::new("player2"),Id::new("player3"),Id::new("player4"),Id::new("player5")],
             TalkTime::try_new(5).unwrap(),
@@ -117,8 +144,8 @@ mod tests {
                 Id::new("room1"),
                 Id::new("theme1"),
                 datetime(2021, 8, 11, 12, 35, 15),
-                WolfGroup::new(vec![Id::new("player2"),Id::new("player3")], Word::try_new("hoge").unwrap()),
-                CitizenGroup::new(vec![Id::new("player4"),Id::new("player5"),Id::new("player1")], Word::try_new("foo").unwrap()),
+                WolfGroup::new(vec![Id::new("player2"),Id::new("player3")], Word::try_new("foo").unwrap()),
+                CitizenGroup::new(vec![Id::new("player4"),Id::new("player5"),Id::new("player1")], Word::try_new("hoge").unwrap()),
             ).unwrap()
         ) ; "max_players_is_5_and_given_2players"
     )]
@@ -161,5 +188,19 @@ mod tests {
             RefCell::new(StepRng::new(0, 1)),
         );
         room_service.start_talk(&room).await
+    }
+
+    #[test_case(0 => Err(DomainError::new(DomainErrorKind::InvalidInput, "raw_count should not be zero")))]
+    #[test_case(1 => Ok(WolfCount{ raw_count: 1 }))]
+    #[test_case(100 => Ok(WolfCount{ raw_count: 100 }))]
+    fn wolf_count_try_new_works(raw_count: usize) -> DomainResult<WolfCount> {
+        WolfCount::try_new(raw_count)
+    }
+
+    #[test_case(0 => Err(DomainError::new(DomainErrorKind::InvalidInput, "raw_player_count should not be zero")))]
+    #[test_case(1 => Ok(PlayerCount{ raw_player_count: 1 }))]
+    #[test_case(100 => Ok(PlayerCount{ raw_player_count: 100 }))]
+    fn player_count_try_new_works(raw_player_count: usize) -> DomainResult<PlayerCount> {
+        PlayerCount::try_new(raw_player_count)
     }
 }
