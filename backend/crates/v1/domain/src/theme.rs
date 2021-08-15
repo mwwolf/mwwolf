@@ -34,7 +34,7 @@ impl Word {
     }
 }
 
-#[derive(new, Getters)]
+#[derive(new, Getters, Clone)]
 pub struct Theme {
     id: Id<Theme>,
     kind: ThemeKind,

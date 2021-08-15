@@ -116,7 +116,17 @@ impl<RST: RoomServiceTypeParameters> RoomService<RST> {
     pub async fn start_talk(&self, room: &Room) -> DomainResult<Talk> {
         match self.theme_repository.find_by_kind(room.theme_kind()).await {
             Ok(themes) => {
-                let theme = themes.choose(&mut *self.rng_core.borrow_mut()).unwrap();
+                let theme = themes
+                    .choose(&mut *self.rng_core.borrow_mut())
+                    .ok_or_else(|| {
+                        DomainError::new(
+                            DomainErrorKind::Fail,
+                            format!(
+                                "themes of related of {:?} does not exists",
+                                room.theme_kind()
+                            ),
+                        )
+                    })?;
                 let mut all_players = room.all_players().clone();
                 all_players.shuffle(&mut *self.rng_core.borrow_mut());
                 let wolfs = all_players
@@ -183,7 +193,19 @@ mod tests {
             TalkTime::try_new(5).unwrap(),
             ThemeKind::try_new("theme_kind1").unwrap(),
         ).unwrap(),
-        datetime(2021, 8, 11, 12, 30, 15)
+        datetime(2021, 8, 11, 12, 30, 15),
+        Id::new("talk1"),
+        Ok(
+            vec![
+                Theme::new(
+                    Id::new("theme1"),
+                    ThemeKind::try_new("theme_kind1").unwrap(),
+                    Word::try_new("hoge").unwrap(),
+                    Word::try_new("foo").unwrap(),
+                ),
+            ]
+        ),
+        StepRng::new(0, 1)
         =>
         Ok(
             Talk::try_new(
@@ -206,29 +228,107 @@ mod tests {
             TalkTime::try_new(6).unwrap(),
             ThemeKind::try_new("theme_kind2").unwrap(),
         ).unwrap(),
-        datetime(2022, 8, 11, 12, 30, 15)
+        datetime(2022, 8, 11, 12, 30, 15),
+        Id::new("talk2"),
+        Ok(
+            vec![
+                Theme::new(
+                    Id::new("theme2"),
+                    ThemeKind::try_new("theme_kind2").unwrap(),
+                    Word::try_new("hoge2").unwrap(),
+                    Word::try_new("foo2").unwrap(),
+                ),
+            ]
+        ),
+        StepRng::new(0, 1)
+        =>
+        Ok(
+            Talk::try_new(
+                Id::new("talk2"),
+                Id::new("room2"),
+                Id::new("theme2"),
+                datetime(2022, 8, 11, 12, 36, 15),
+                WolfGroup::new(vec![Id::new("player3"),Id::new("player4"),Id::new("player5")], Word::try_new("foo2").unwrap()),
+                CitizenGroup::new(vec![Id::new("player6"),Id::new("player7"),Id::new("player2")], Word::try_new("hoge2").unwrap()),
+            ).unwrap()
+        ) ; "max_players_is_6_and_given_3players"
+    )]
+    #[test_case(
+        Room::try_new(
+            Id::new("room1"),
+            PlayerCount::try_new(5).unwrap(),
+            WolfCount::try_new(2).unwrap(),
+            Id::new("player1"),
+            vec![Id::new("player1"), Id::new("player2"),Id::new("player3"),Id::new("player4"),Id::new("player5")],
+            TalkTime::try_new(5).unwrap(),
+            ThemeKind::try_new("theme_kind1").unwrap(),
+        ).unwrap(),
+        datetime(2021, 8, 11, 12, 30, 15),
+        Id::new("talk1"),
+        Ok(
+            vec![
+                Theme::new(
+                    Id::new("theme1"),
+                    ThemeKind::try_new("theme_kind1").unwrap(),
+                    Word::try_new("hoge").unwrap(),
+                    Word::try_new("foo").unwrap(),
+                ),
+                Theme::new(
+                    Id::new("theme2"),
+                    ThemeKind::try_new("theme_kind2").unwrap(),
+                    Word::try_new("hoge2").unwrap(),
+                    Word::try_new("foo2").unwrap(),
+                ),
+            ]
+        ),
+        StepRng::new(0, 1)
         =>
         Ok(
             Talk::try_new(
                 Id::new("talk1"),
-                Id::new("room2"),
+                Id::new("room1"),
                 Id::new("theme1"),
-                datetime(2022, 8, 11, 12, 36, 15),
-                WolfGroup::new(vec![Id::new("player3"),Id::new("player4"),Id::new("player5")], Word::try_new("foo").unwrap()),
-                CitizenGroup::new(vec![Id::new("player6"),Id::new("player7"),Id::new("player2")], Word::try_new("hoge").unwrap()),
+                datetime(2021, 8, 11, 12, 35, 15),
+                WolfGroup::new(vec![Id::new("player2"),Id::new("player3")], Word::try_new("foo").unwrap()),
+                CitizenGroup::new(vec![Id::new("player4"),Id::new("player5"),Id::new("player1")], Word::try_new("hoge").unwrap()),
             ).unwrap()
-        ) ; "max_players_is_6_and_given_3players"
+        ) ; "max_players_is_5_and_given_2players_return_multi_theme"
+    )]
+    #[test_case(
+        Room::try_new(
+            Id::new("room1"),
+            PlayerCount::try_new(5).unwrap(),
+            WolfCount::try_new(2).unwrap(),
+            Id::new("player1"),
+            vec![Id::new("player1"), Id::new("player2"),Id::new("player3"),Id::new("player4"),Id::new("player5")],
+            TalkTime::try_new(5).unwrap(),
+            ThemeKind::try_new("theme_kind1").unwrap(),
+        ).unwrap(),
+        datetime(2021, 8, 11, 12, 30, 15),
+        Id::new("talk1"),
+        Ok(vec![]),
+        StepRng::new(0, 1)
+        =>
+        Err(
+            DomainError::new(DomainErrorKind::Fail, "themes of related of ThemeKind(\"theme_kind1\") does not exists")
+        ) ; "fail_max_players_is_5_and_given_2players_return_zero_theme"
     )]
     #[async_std::test]
-    async fn room_start_talk_works(room: Room, now: DateTime<Tz>) -> DomainResult<Talk> {
+    async fn room_start_talk_works(
+        room: Room,
+        now: DateTime<Tz>,
+        new_talk_id: Id<Talk>,
+        return_themes_result: RepositoryResult<Vec<Theme>>,
+        step_rng: rand::rngs::mock::StepRng,
+    ) -> DomainResult<Talk> {
         let mut mock_date_time_gen = time::MockDateTimeGen::new();
         mock_date_time_gen.expect_now().returning(move || now);
 
         let mut mock_talk_factory = MockTalkFactory::new();
         mock_talk_factory.expect_create().returning(
-            |room_id, theme_id, ended_at, wolf_group, citizen_group| {
+            move |room_id, theme_id, ended_at, wolf_group, citizen_group| {
                 Ok(Talk::new(
-                    Id::new("talk1"),
+                    new_talk_id.clone(),
                     room_id,
                     theme_id,
                     ended_at,
@@ -242,20 +342,16 @@ mod tests {
         mock_theme_repository
             .expect_find_by_kind()
             .with(eq(room.theme_kind.clone()))
-            .returning(|kind| {
-                Ok(vec![Theme::new(
-                    Id::new("theme1"),
-                    kind.clone(),
-                    Word::try_new("hoge").unwrap(),
-                    Word::try_new("foo").unwrap(),
-                )])
+            .returning(move |_| match &return_themes_result {
+                Err(e) => Err(RepositoryError::new(e.kind().clone(), e.message())),
+                Ok(ref v) => Ok(v.clone()),
             });
 
         let room_service = RoomService::<MockRoomServiceTypeParameter>::new(
             mock_talk_factory,
             mock_theme_repository,
             mock_date_time_gen,
-            RefCell::new(StepRng::new(0, 1)),
+            RefCell::new(step_rng),
         );
         room_service.start_talk(&room).await
     }
