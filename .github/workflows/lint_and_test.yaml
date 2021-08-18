@@ -7,7 +7,7 @@ jobs:
       matrix:
         workspace: ["frontend", "backend"]
     container:
-      image: docker.pkg.github.com/mwwolf/mwwolf/rust_test:1.0.0
+      image: docker.pkg.github.com/mwwolf/mwwolf/rust_test:1.0.1
       credentials:
         username: ${{ secrets.GH_PACKAGE_READ_USER }}
         password: ${{ secrets.GH_PACKAGE_READ_TOKEN }}

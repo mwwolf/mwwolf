@@ -1,4 +1,4 @@
-FROM rust:1.52-buster
+FROM rust:1.54-buster
 
 RUN apt update && apt install -y nodejs && \
 	cargo install wasm-bindgen-cli && \
