@@ -17,7 +17,7 @@ pub struct DomainError {
     sub_errors: Vec<DomainError>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum RepositoryErrorKind {
     NotFound,
     Conflict,

@@ -1,6 +1,7 @@
 use crate::*;
+use rand::prelude::*;
 
-#[derive(Debug, PartialEq, NamedTupleFrom)]
+#[derive(Debug, Clone, PartialEq, NamedTupleFrom)]
 pub struct ThemeKind(String);
 
 impl ThemeKind {
@@ -17,7 +18,7 @@ impl ThemeKind {
     }
 }
 
-#[derive(Debug, PartialEq, NamedTupleFrom)]
+#[derive(Debug, PartialEq, NamedTupleFrom, Clone)]
 pub struct Word(String);
 impl Word {
     pub fn try_new(word: impl Into<String>) -> DomainResult<Self> {
@@ -33,12 +34,29 @@ impl Word {
     }
 }
 
-#[derive(new, Getters)]
+#[derive(new, Getters, Clone)]
 pub struct Theme {
     id: Id<Theme>,
     kind: ThemeKind,
     first: Word,
     second: Word,
+}
+
+impl Theme {
+    pub fn choice_word(&self, rng: &mut impl RngCore) -> (&Word, &Word) {
+        if rng.gen() {
+            (&self.first, &self.second)
+        } else {
+            (&self.second, &self.first)
+        }
+    }
+}
+
+// TODO(ryutah): automock should be move to testmww
+#[cfg_attr(test, automock)]
+#[async_trait]
+pub trait ThemeRepository {
+    async fn find_by_kind(&self, kind: &ThemeKind) -> RepositoryResult<Vec<Theme>>;
 }
 
 #[cfg(test)]
@@ -62,5 +80,30 @@ mod tests {
             )))]
     fn word_try_new_works(word: impl Into<String>) -> DomainResult<Word> {
         Word::try_new(word)
+    }
+
+    #[test_case(
+        Theme::new(
+            Id::new("theme1"),
+            ThemeKind::try_new("test").unwrap(),
+            Word::try_new("foo").unwrap(),
+            Word::try_new("bar").unwrap(),
+        ), rand::rngs::mock::StepRng::new(0, 1)
+        =>
+        (Word::try_new("bar").unwrap(), Word::try_new("foo").unwrap())
+    )]
+    #[test_case(
+        Theme::new(
+            Id::new("theme1"),
+            ThemeKind::try_new("test").unwrap(),
+            Word::try_new("foo2").unwrap(),
+            Word::try_new("bar2").unwrap(),
+        ), rand::rngs::mock::StepRng::new(1, 0)
+        =>
+        (Word::try_new("bar2").unwrap(), Word::try_new("foo2").unwrap())
+    )]
+    fn theme_choose_word_works(theme: Theme, mut rng: rand::rngs::mock::StepRng) -> (Word, Word) {
+        let (word1, word2) = theme.choice_word(&mut rng);
+        (word1.clone(), word2.clone())
     }
 }

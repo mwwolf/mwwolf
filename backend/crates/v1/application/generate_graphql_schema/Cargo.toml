@@ -10,4 +10,4 @@ edition = "2018"
 graphql = { path = "../../presentation/graphql" }
 di = { path = "../../di", features = ["local"] }
 async-graphql = { git = "https://github.com/async-graphql/async-graphql.git", branch = "actix-web-v4-beta" }
-clap = "3.0.0-beta.2"
+clap = "3.0.0-beta.4"

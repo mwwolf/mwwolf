@@ -352,7 +352,7 @@ pub(crate) fn convert_key(project_id: &str, key: &Key) -> api::Key {
 fn convert_entity(project_name: &str, entity: Entity) -> api::Entity {
     let key = convert_key(project_name, &entity.key);
     let properties = match entity.properties {
-        Value::EntityValue(properties) => properties,
+        Value::Entity(properties) => properties,
         _ => panic!("unexpected non-entity datastore value"),
     };
     let properties = properties
@@ -367,21 +367,21 @@ fn convert_entity(project_name: &str, entity: Entity) -> api::Entity {
 
 fn convert_value(project_name: &str, value: Value) -> api::Value {
     let value_type = match value {
-        Value::BooleanValue(val) => ValueType::BooleanValue(val),
-        Value::IntegerValue(val) => ValueType::IntegerValue(val),
-        Value::DoubleValue(val) => ValueType::DoubleValue(val),
-        Value::TimestampValue(val) => ValueType::TimestampValue(prost_types::Timestamp {
+        Value::Boolean(val) => ValueType::BooleanValue(val),
+        Value::Integer(val) => ValueType::IntegerValue(val),
+        Value::Double(val) => ValueType::DoubleValue(val),
+        Value::Timestamp(val) => ValueType::TimestampValue(prost_types::Timestamp {
             seconds: val.timestamp(),
             nanos: val.timestamp_subsec_nanos() as i32,
         }),
-        Value::KeyValue(key) => ValueType::KeyValue(convert_key(project_name, &key)),
-        Value::StringValue(val) => ValueType::StringValue(val),
-        Value::BlobValue(val) => ValueType::BlobValue(val),
-        Value::GeoPointValue(latitude, longitude) => ValueType::GeoPointValue(api::LatLng {
+        Value::Key(key) => ValueType::KeyValue(convert_key(project_name, &key)),
+        Value::Strings(val) => ValueType::StringValue(val),
+        Value::Blob(val) => ValueType::BlobValue(val),
+        Value::GeoPoint(latitude, longitude) => ValueType::GeoPointValue(api::LatLng {
             latitude,
             longitude,
         }),
-        Value::EntityValue(properties) => ValueType::EntityValue({
+        Value::Entity(properties) => ValueType::EntityValue({
             api::Entity {
                 key: None,
                 properties: properties
@@ -390,7 +390,7 @@ fn convert_value(project_name: &str, value: Value) -> api::Value {
                     .collect(),
             }
         }),
-        Value::ArrayValue(values) => ValueType::ArrayValue(api::ArrayValue {
+        Value::Array(values) => ValueType::ArrayValue(api::ArrayValue {
             values: values
                 .into_iter()
                 .map(|value| convert_value(project_name, value))

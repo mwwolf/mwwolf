@@ -13,3 +13,7 @@ infrastructure = { path = "../infrastructure" }
 domain = { path = "../domain" }
 libmww = { path = "../libmww" }
 async-std = { version = "1.9.0", features = ["attributes", "tokio1"] }
+mockall = "0.10.2"
+chrono = "0.4.19"
+chrono-tz = "0.5.3"
+rand = "0.8.4"
