@@ -12,7 +12,7 @@ impl Entity {
     pub fn new(key: Key, value: impl IntoValue) -> Result<Entity, ConvertError> {
         let properties = value.into_value();
         match properties {
-            Value::EntityValue(_) => Ok(Entity { key, properties }),
+            Value::Entity(_) => Ok(Entity { key, properties }),
             _ => Err(ConvertError::UnexpectedPropertyType {
                 expected: String::from("entity"),
                 got: String::from(properties.type_name()),
@@ -70,7 +70,7 @@ impl From<api::Entity> for Entity {
             .into_iter()
             .map(|(k, v)| (k, Value::from(v.value_type.unwrap())))
             .collect();
-        let properties = Value::EntityValue(properties);
+        let properties = Value::Entity(properties);
 
         Entity { key, properties }
     }

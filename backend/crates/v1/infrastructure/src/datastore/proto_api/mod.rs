@@ -3,6 +3,7 @@ pub mod api {
         tonic::include_proto!("google.r#type");
     }
     pub mod datastore {
+        #[allow(clippy::enum_variant_names)]
         pub mod v1 {
             tonic::include_proto!("google.datastore.v1");
         }

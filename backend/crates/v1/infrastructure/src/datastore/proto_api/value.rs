@@ -11,40 +11,40 @@ use crate::datastore::proto_api::Key;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
-    BooleanValue(bool),
+    Boolean(bool),
 
-    IntegerValue(i64),
+    Integer(i64),
 
-    DoubleValue(f64),
+    Double(f64),
 
-    TimestampValue(chrono::NaiveDateTime),
+    Timestamp(chrono::NaiveDateTime),
 
-    KeyValue(Key),
+    Key(Key),
 
-    StringValue(String),
+    Strings(String),
 
-    BlobValue(Vec<u8>),
+    Blob(Vec<u8>),
 
-    GeoPointValue(f64, f64),
+    GeoPoint(f64, f64),
 
-    EntityValue(HashMap<String, Value>),
+    Entity(HashMap<String, Value>),
 
-    ArrayValue(Vec<Value>),
+    Array(Vec<Value>),
 }
 
 impl Value {
     pub fn type_name(&self) -> &'static str {
         match self {
-            Value::BooleanValue(_) => "bool",
-            Value::IntegerValue(_) => "integer",
-            Value::DoubleValue(_) => "double",
-            Value::TimestampValue(_) => "timestamp",
-            Value::KeyValue(_) => "key",
-            Value::StringValue(_) => "string",
-            Value::BlobValue(_) => "blob",
-            Value::GeoPointValue(_, _) => "geopoint",
-            Value::EntityValue(_) => "entity",
-            Value::ArrayValue(_) => "array",
+            Value::Boolean(_) => "bool",
+            Value::Integer(_) => "integer",
+            Value::Double(_) => "double",
+            Value::Timestamp(_) => "timestamp",
+            Value::Key(_) => "key",
+            Value::Strings(_) => "string",
+            Value::Blob(_) => "blob",
+            Value::GeoPoint(_, _) => "geopoint",
+            Value::Entity(_) => "entity",
+            Value::Array(_) => "array",
         }
     }
 }
@@ -65,7 +65,7 @@ impl IntoValue for Value {
 
 impl IntoValue for String {
     fn into_value(self) -> Value {
-        Value::StringValue(self)
+        Value::Strings(self)
     }
 }
 
@@ -77,61 +77,61 @@ impl IntoValue for &str {
 
 impl IntoValue for i8 {
     fn into_value(self) -> Value {
-        Value::IntegerValue(self as i64)
+        Value::Integer(self as i64)
     }
 }
 
 impl IntoValue for i16 {
     fn into_value(self) -> Value {
-        Value::IntegerValue(self as i64)
+        Value::Integer(self as i64)
     }
 }
 
 impl IntoValue for i32 {
     fn into_value(self) -> Value {
-        Value::IntegerValue(self as i64)
+        Value::Integer(self as i64)
     }
 }
 
 impl IntoValue for i64 {
     fn into_value(self) -> Value {
-        Value::IntegerValue(self)
+        Value::Integer(self)
     }
 }
 
 impl IntoValue for f32 {
     fn into_value(self) -> Value {
-        Value::DoubleValue(self as f64)
+        Value::Double(self as f64)
     }
 }
 
 impl IntoValue for f64 {
     fn into_value(self) -> Value {
-        Value::DoubleValue(self)
+        Value::Double(self)
     }
 }
 
 impl IntoValue for bool {
     fn into_value(self) -> Value {
-        Value::BooleanValue(self)
+        Value::Boolean(self)
     }
 }
 
 impl IntoValue for Key {
     fn into_value(self) -> Value {
-        Value::KeyValue(self)
+        Value::Key(self)
     }
 }
 
 impl IntoValue for NaiveDateTime {
     fn into_value(self) -> Value {
-        Value::TimestampValue(self)
+        Value::Timestamp(self)
     }
 }
 
 impl IntoValue for Bytes {
     fn into_value(self) -> Value {
-        Value::BlobValue(self.to_vec())
+        Value::Blob(self.to_vec())
     }
 }
 
@@ -140,7 +140,7 @@ where
     T: IntoValue,
 {
     fn into_value(self) -> Value {
-        Value::ArrayValue(self.into_iter().map(IntoValue::into_value).collect())
+        Value::Array(self.into_iter().map(IntoValue::into_value).collect())
     }
 }
 
@@ -149,7 +149,7 @@ where
     T: IntoValue,
 {
     fn into_value(self) -> Value {
-        Value::EntityValue(self.into_iter().map(|(k, v)| (k, v.into_value())).collect())
+        Value::Entity(self.into_iter().map(|(k, v)| (k, v.into_value())).collect())
     }
 }
 
@@ -161,7 +161,7 @@ where
     where
         I: IntoIterator<Item = T>,
     {
-        Value::ArrayValue(iter.into_iter().map(IntoValue::into_value).collect())
+        Value::Array(iter.into_iter().map(IntoValue::into_value).collect())
     }
 }
 
@@ -174,7 +174,7 @@ impl FromValue for Value {
 impl FromValue for String {
     fn from_value(value: Value) -> Result<String, ConvertError> {
         match value {
-            Value::StringValue(value) => Ok(value),
+            Value::Strings(value) => Ok(value),
             _ => Err(ConvertError::UnexpectedPropertyType {
                 expected: String::from("string"),
                 got: String::from(value.type_name()),
@@ -186,7 +186,7 @@ impl FromValue for String {
 impl FromValue for i64 {
     fn from_value(value: Value) -> Result<i64, ConvertError> {
         match value {
-            Value::IntegerValue(value) => Ok(value),
+            Value::Integer(value) => Ok(value),
             _ => Err(ConvertError::UnexpectedPropertyType {
                 expected: String::from("integer"),
                 got: String::from(value.type_name()),
@@ -198,7 +198,7 @@ impl FromValue for i64 {
 impl FromValue for f64 {
     fn from_value(value: Value) -> Result<f64, ConvertError> {
         match value {
-            Value::DoubleValue(value) => Ok(value),
+            Value::Double(value) => Ok(value),
             _ => Err(ConvertError::UnexpectedPropertyType {
                 expected: String::from("double"),
                 got: String::from(value.type_name()),
@@ -210,7 +210,7 @@ impl FromValue for f64 {
 impl FromValue for bool {
     fn from_value(value: Value) -> Result<bool, ConvertError> {
         match value {
-            Value::BooleanValue(value) => Ok(value),
+            Value::Boolean(value) => Ok(value),
             _ => Err(ConvertError::UnexpectedPropertyType {
                 expected: String::from("bool"),
                 got: String::from(value.type_name()),
@@ -222,7 +222,7 @@ impl FromValue for bool {
 impl FromValue for Key {
     fn from_value(value: Value) -> Result<Key, ConvertError> {
         match value {
-            Value::KeyValue(value) => Ok(value),
+            Value::Key(value) => Ok(value),
             _ => Err(ConvertError::UnexpectedPropertyType {
                 expected: String::from("key"),
                 got: String::from(value.type_name()),
@@ -234,7 +234,7 @@ impl FromValue for Key {
 impl FromValue for NaiveDateTime {
     fn from_value(value: Value) -> Result<NaiveDateTime, ConvertError> {
         match value {
-            Value::TimestampValue(value) => Ok(value),
+            Value::Timestamp(value) => Ok(value),
             _ => Err(ConvertError::UnexpectedPropertyType {
                 expected: String::from("timestamp"),
                 got: String::from(value.type_name()),
@@ -246,7 +246,7 @@ impl FromValue for NaiveDateTime {
 impl FromValue for Bytes {
     fn from_value(value: Value) -> Result<Bytes, ConvertError> {
         match value {
-            Value::BlobValue(value) => Ok(Bytes::from(value)),
+            Value::Blob(value) => Ok(Bytes::from(value)),
             _ => Err(ConvertError::UnexpectedPropertyType {
                 expected: String::from("blob"),
                 got: String::from(value.type_name()),
@@ -261,7 +261,7 @@ where
 {
     fn from_value(value: Value) -> Result<Vec<T>, ConvertError> {
         match value {
-            Value::ArrayValue(values) => {
+            Value::Array(values) => {
                 let values = values
                     .into_iter()
                     .map(FromValue::from_value)
@@ -282,7 +282,7 @@ where
 {
     fn from_value(value: Value) -> Result<HashMap<String, T>, ConvertError> {
         match value {
-            Value::EntityValue(values) => {
+            Value::Entity(values) => {
                 let values = values
                     .into_iter()
                     .map(|(k, v)| {
@@ -304,24 +304,24 @@ impl From<ValueType> for Value {
     fn from(value: ValueType) -> Value {
         match value {
             ValueType::NullValue(_) => unreachable!(),
-            ValueType::BooleanValue(val) => Value::BooleanValue(val),
-            ValueType::IntegerValue(val) => Value::IntegerValue(val),
-            ValueType::DoubleValue(val) => Value::DoubleValue(val),
+            ValueType::BooleanValue(val) => Value::Boolean(val),
+            ValueType::IntegerValue(val) => Value::Integer(val),
+            ValueType::DoubleValue(val) => Value::Double(val),
             ValueType::TimestampValue(val) => {
-                Value::TimestampValue(NaiveDateTime::from_timestamp(val.seconds, val.nanos as u32))
+                Value::Timestamp(NaiveDateTime::from_timestamp(val.seconds, val.nanos as u32))
             }
-            ValueType::KeyValue(key) => Value::KeyValue(Key::from(key)),
-            ValueType::StringValue(val) => Value::StringValue(val),
-            ValueType::BlobValue(val) => Value::BlobValue(val),
-            ValueType::GeoPointValue(val) => Value::GeoPointValue(val.latitude, val.longitude),
-            ValueType::EntityValue(entity) => Value::EntityValue({
+            ValueType::KeyValue(key) => Value::Key(Key::from(key)),
+            ValueType::StringValue(val) => Value::Strings(val),
+            ValueType::BlobValue(val) => Value::Blob(val),
+            ValueType::GeoPointValue(val) => Value::GeoPoint(val.latitude, val.longitude),
+            ValueType::EntityValue(entity) => Value::Entity({
                 entity
                     .properties
                     .into_iter()
                     .map(|(k, v)| (k, Value::from(v.value_type.unwrap())))
                     .collect()
             }),
-            ValueType::ArrayValue(seq) => Value::ArrayValue(
+            ValueType::ArrayValue(seq) => Value::Array(
                 seq.values
                     .into_iter()
                     .map(|val| Value::from(val.value_type.unwrap()))
