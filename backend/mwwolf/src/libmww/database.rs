@@ -3,13 +3,13 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum DatabaseError {
     #[error("{0}")]
-    FailedOpen(anyhow::Error),
+    Open(anyhow::Error),
     #[error("{0}")]
-    FailedTransactionBegin(anyhow::Error),
+    TransactionBegin(anyhow::Error),
     #[error("{0}")]
-    FailedTransactionRollback(anyhow::Error),
+    TransactionRollback(anyhow::Error),
     #[error("{0}")]
-    FailedTransactionCommit(anyhow::Error),
+    TransactionCommit(anyhow::Error),
 }
 
 #[macro_export]
@@ -58,18 +58,18 @@ impl PartialEq for DatabaseError {
     fn eq(&self, t: &Self) -> bool {
         matches!(
             (self, t),
-            (DatabaseError::FailedOpen(_), DatabaseError::FailedOpen(_))
+            (DatabaseError::Open(_), DatabaseError::Open(_))
                 | (
-                    DatabaseError::FailedTransactionBegin(_),
-                    DatabaseError::FailedTransactionBegin(_),
+                    DatabaseError::TransactionBegin(_),
+                    DatabaseError::TransactionBegin(_),
                 )
                 | (
-                    DatabaseError::FailedTransactionRollback(_),
-                    DatabaseError::FailedTransactionRollback(_)
+                    DatabaseError::TransactionRollback(_),
+                    DatabaseError::TransactionRollback(_)
                 )
                 | (
-                    DatabaseError::FailedTransactionCommit(_),
-                    DatabaseError::FailedTransactionCommit(_)
+                    DatabaseError::TransactionCommit(_),
+                    DatabaseError::TransactionCommit(_)
                 )
         )
     }

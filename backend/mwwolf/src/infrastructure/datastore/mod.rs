@@ -94,11 +94,11 @@ impl database::Transaction for Transaction {
             .service
             .commit(commit_request)
             .await
-            .map_err(|e| database::DatabaseError::FailedTransactionCommit(anyhow!("{}", e)))?;
+            .map_err(|e| database::DatabaseError::TransactionCommit(anyhow!("{}", e)))?;
         let commit_response = response.into_inner();
         for result in commit_response.mutation_results.iter() {
             if result.conflict_detected {
-                return Err(database::DatabaseError::FailedTransactionCommit(anyhow!(
+                return Err(database::DatabaseError::TransactionCommit(anyhow!(
                     "conflit detected"
                 )));
             }
@@ -118,7 +118,7 @@ impl database::Transaction for Transaction {
             .service
             .rollback(rollback_request)
             .await
-            .map_err(|e| database::DatabaseError::FailedTransactionRollback(anyhow!("{}", e)))?;
+            .map_err(|e| database::DatabaseError::TransactionRollback(anyhow!("{}", e)))?;
         Ok(())
     }
 }
@@ -197,7 +197,7 @@ impl database::Connection for Connection {
             .service
             .begin_transaction(begin_transaction_request)
             .await
-            .map_err(|e| database::DatabaseError::FailedTransactionBegin(anyhow!("{}", e)))?;
+            .map_err(|e| database::DatabaseError::TransactionBegin(anyhow!("{}", e)))?;
         let tx_response = response.into_inner();
 
         Transaction::new(
@@ -236,7 +236,7 @@ async fn new_client(project_name: impl Into<String>) -> Result<Client, database:
 }
 
 fn convert_datastore_error_database_error(err: proto_api::Error) -> database::DatabaseError {
-    database::DatabaseError::FailedOpen(err.into())
+    database::DatabaseError::Open(err.into())
 }
 
 // fn namespace_from_executor<'a>(executor: &'a Executor<Connection, Transaction>) -> &'a str {

@@ -1,6 +1,3 @@
-#[cfg(test)]
-use mockall::{automock, predicate::*};
-
 mod error;
 mod id;
 mod player;
@@ -12,6 +9,7 @@ mod theme;
 mod vote;
 
 use crate::libmww::*;
+use crate::*;
 pub use error::*;
 pub use id::Id;
 

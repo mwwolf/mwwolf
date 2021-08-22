@@ -19,6 +19,8 @@ impl AsMut<Arc<datastore::ConnectionFactory>> for ConnectionFactoryGurad {
     }
 }
 
+/// NOTE(ryutah): 実装進んだら使うようになる(はず)
+#[allow(dead_code)]
 pub async fn init_test_database() -> Result<ConnectionFactoryGurad, anyhow::Error> {
     let db_uuid = Uuid::new_v4();
     let namespace = db_uuid.to_string().replace("-", "");
