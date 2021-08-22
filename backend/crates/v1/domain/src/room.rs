@@ -58,7 +58,7 @@ pub struct Room {
     wolf_count: WolfCount,
     host_player_id: Id<Player>,
     all_players: Vec<Id<Player>>,
-    talk_time: TalkTime,
+    talk_time: TalkMinutes,
     theme_kind: ThemeKind,
 }
 
@@ -69,7 +69,7 @@ impl Room {
         wolf_count: WolfCount,
         host_player_id: Id<Player>,
         all_players: Vec<Id<Player>>,
-        talk_time: TalkTime,
+        talk_time: TalkMinutes,
         theme_kind: ThemeKind,
     ) -> DomainResult<Self> {
         let room = Room {
@@ -190,7 +190,7 @@ mod tests {
             WolfCount::try_new(2).unwrap(),
             Id::new("player1"),
             vec![Id::new("player1"), Id::new("player2"),Id::new("player3"),Id::new("player4"),Id::new("player5")],
-            TalkTime::try_new(5).unwrap(),
+            TalkMinutes::try_new(5).unwrap(),
             ThemeKind::try_new("theme_kind1").unwrap(),
         ).unwrap(),
         datetime(2021, 8, 11, 12, 30, 15),
@@ -225,7 +225,7 @@ mod tests {
             WolfCount::try_new(3).unwrap(),
             Id::new("player2"),
             vec![Id::new("player2"), Id::new("player3"),Id::new("player4"),Id::new("player5"),Id::new("player6"), Id::new("player7")],
-            TalkTime::try_new(6).unwrap(),
+            TalkMinutes::try_new(6).unwrap(),
             ThemeKind::try_new("theme_kind2").unwrap(),
         ).unwrap(),
         datetime(2022, 8, 11, 12, 30, 15),
@@ -260,7 +260,7 @@ mod tests {
             WolfCount::try_new(2).unwrap(),
             Id::new("player1"),
             vec![Id::new("player1"), Id::new("player2"),Id::new("player3"),Id::new("player4"),Id::new("player5")],
-            TalkTime::try_new(5).unwrap(),
+            TalkMinutes::try_new(5).unwrap(),
             ThemeKind::try_new("theme_kind1").unwrap(),
         ).unwrap(),
         datetime(2021, 8, 11, 12, 30, 15),
@@ -301,7 +301,7 @@ mod tests {
             WolfCount::try_new(2).unwrap(),
             Id::new("player1"),
             vec![Id::new("player1"), Id::new("player2"),Id::new("player3"),Id::new("player4"),Id::new("player5")],
-            TalkTime::try_new(5).unwrap(),
+            TalkMinutes::try_new(5).unwrap(),
             ThemeKind::try_new("theme_kind1").unwrap(),
         ).unwrap(),
         datetime(2021, 8, 11, 12, 30, 15),
@@ -376,7 +376,7 @@ mod tests {
         WolfCount::try_new(4).unwrap(),
         Id::new("player1"),
         vec![],
-        TalkTime::try_new(3).unwrap(),
+        TalkMinutes::try_new(3).unwrap(),
         ThemeKind::try_new("theme1").unwrap()
         =>
         Ok(Room {
@@ -385,7 +385,7 @@ mod tests {
             wolf_count: WolfCount::try_new(4).unwrap(),
             host_player_id: Id::new("player1"),
             all_players: vec![],
-            talk_time: TalkTime::try_new(3).unwrap(),
+            talk_time: TalkMinutes::try_new(3).unwrap(),
             theme_kind: ThemeKind::try_new("theme1").unwrap(),
         })
     )]
@@ -395,7 +395,7 @@ mod tests {
         WolfCount::try_new(5).unwrap(),
         Id::new("player2"),
         vec![],
-        TalkTime::try_new(4).unwrap(),
+        TalkMinutes::try_new(4).unwrap(),
         ThemeKind::try_new("theme2").unwrap()
         =>
         Ok(Room {
@@ -404,7 +404,7 @@ mod tests {
             wolf_count: WolfCount::try_new(5).unwrap(),
             host_player_id: Id::new("player2"),
             all_players: vec![],
-            talk_time: TalkTime::try_new(4).unwrap(),
+            talk_time: TalkMinutes::try_new(4).unwrap(),
             theme_kind: ThemeKind::try_new("theme2").unwrap(),
         })
     )]
@@ -414,7 +414,7 @@ mod tests {
         WolfCount::try_new(5).unwrap(),
         Id::new("player2"),
         vec![],
-        TalkTime::try_new(4).unwrap(),
+        TalkMinutes::try_new(4).unwrap(),
         ThemeKind::try_new("theme2").unwrap()
         =>
         Err(DomainError::new(DomainErrorKind::InvalidInput, "player_count must be bigger than wold count"))
@@ -425,7 +425,7 @@ mod tests {
         wolf_count: WolfCount,
         host_player_id: Id<Player>,
         all_players: Vec<Id<Player>>,
-        talk_time: TalkTime,
+        talk_time: TalkMinutes,
         theme_kind: ThemeKind,
     ) -> DomainResult<Room> {
         Room::try_new(

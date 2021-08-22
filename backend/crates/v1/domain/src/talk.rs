@@ -3,13 +3,12 @@ use chrono::*;
 use chrono_tz::Tz;
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct TalkTime(Duration);
+pub struct TalkMinutes(Duration);
 
-// TODO(ryutah): rename to TalkMinutes
-impl TalkTime {
+impl TalkMinutes {
     const DEFAULT_MAX_LIMIT: u32 = 60;
     const DEFAULT_MIN_LIMIT: u32 = 1;
-    pub fn try_new(talk_time_minutes: u32) -> DomainResult<TalkTime> {
+    pub fn try_new(talk_time_minutes: u32) -> DomainResult<TalkMinutes> {
         if !(Self::DEFAULT_MIN_LIMIT..=Self::DEFAULT_MAX_LIMIT).contains(&talk_time_minutes) {
             Err(DomainError::new(
                 DomainErrorKind::InvalidInput,
@@ -21,7 +20,7 @@ impl TalkTime {
                 ),
             ))
         } else {
-            Ok(TalkTime(Duration::minutes(talk_time_minutes as i64)))
+            Ok(TalkMinutes(Duration::minutes(talk_time_minutes as i64)))
         }
     }
 
@@ -156,8 +155,8 @@ mod tests {
         Talk::try_new(id, room_id, theme_id, ended_at, wolves, citizen)
     }
 
-    #[test_case(1 => Ok(TalkTime(Duration::minutes(1))))]
-    #[test_case(60 => Ok(TalkTime(Duration::minutes(60))))]
+    #[test_case(1 => Ok(TalkMinutes(Duration::minutes(1))))]
+    #[test_case(60 => Ok(TalkMinutes(Duration::minutes(60))))]
     #[test_case(0 => Err(DomainError::new(
                 DomainErrorKind::InvalidInput,
                 "0 is outside of limits. the range are min:1 ~ max:60",
@@ -166,22 +165,22 @@ mod tests {
                 DomainErrorKind::InvalidInput,
                 "61 is outside of limits. the range are min:1 ~ max:60",
             )))]
-    fn talk_time_try_minutes_works(minutes: u32) -> DomainResult<TalkTime> {
-        TalkTime::try_new(minutes)
+    fn talk_time_try_minutes_works(minutes: u32) -> DomainResult<TalkMinutes> {
+        TalkMinutes::try_new(minutes)
     }
 
     #[test_case(
-        TalkTime::try_new(3).unwrap(),
+        TalkMinutes::try_new(3).unwrap(),
         datetime(2021,3,4,2,30,0)
         => datetime(2021,3,4,2,33,0)
         )]
     #[test_case(
-        TalkTime::try_new(5).unwrap(),
+        TalkMinutes::try_new(5).unwrap(),
         datetime(2021,3,4,2,0,0)
         => datetime(2021,3,4,2,5,0)
         )]
     fn talk_time_calc_ended_at_works(
-        talk_time: TalkTime,
+        talk_time: TalkMinutes,
         started_at: DateTime<Tz>,
     ) -> DateTime<Tz> {
         talk_time.calc_ended_at(&started_at)
