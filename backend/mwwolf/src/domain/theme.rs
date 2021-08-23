@@ -52,7 +52,6 @@ impl Theme {
     }
 }
 
-// TODO(ryutah): automock should be move to testmww
 #[cfg_attr(test, automock)]
 #[async_trait]
 pub trait ThemeRepository {
