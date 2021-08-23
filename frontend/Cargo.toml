@@ -1,6 +1,3 @@
 [workspace]
 
-members = [
-  "crates/application/yewmww",
-  "crates/api_client/graphql_api_client",
-]
+members = ["application/yewmww"]

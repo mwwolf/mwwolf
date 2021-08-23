@@ -9,6 +9,7 @@ mod theme;
 mod vote;
 
 use crate::libmww::*;
+#[cfg(test)]
 use crate::*;
 pub use error::*;
 pub use id::Id;

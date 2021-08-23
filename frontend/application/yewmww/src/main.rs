@@ -1,3 +1,10 @@
+#[macro_use]
+extern crate async_trait;
+
+#[macro_use]
+extern crate derive_new;
+
+mod graphql_api_client;
 use graphql_api_client::*;
 use graphql_client::GraphQLQuery;
 use yew::prelude::*;
@@ -92,7 +99,7 @@ impl Component for Model {
 
 #[derive(GraphQLQuery)]
 #[graphql(
-    schema_path = "../../../../schema/graphql/api.graphql",
+    schema_path = "../../../schema/graphql/api.graphql",
     query_path = "query/query.graphql",
     response_derives = "Debug"
 )]

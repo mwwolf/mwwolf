@@ -8,12 +8,14 @@ edition = "2018"
 
 [dependencies]
 yew = "0.18.0"
-graphql_api_client = { path = "../../api_client/graphql_api_client" }
 graphql_client = { version = "0.9.0", features = ["web"] }
 serde = { version = "1.0.126", features = ["derive"] }
 yewtil = { version = "0.4.0", features = ["future"] }
 getrandom = { version = "0.2.3", features = ["js"] }
 surf = { version = "2.2.0", default-features = false, features = ["wasm-client"] }
+anyhow = "1.0.41"
+async-trait = "0.1.50"
+derive-new = "0.5.9"
 
 [dev-dependencies]
 wasm-bindgen = "0.2.74"
