@@ -1,0 +1,50 @@
+[package]
+name = "mwwolf"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+local = []
+cloudrun = []
+
+[dependencies]
+async-graphql = { git="https://github.com/async-graphql/async-graphql.git", branch="actix-web-v4-beta" }
+futures-channel = { version="0.3.5", default-features=false, features=["sink", "alloc", "std"] }
+async-std = { version="1.9.0", features=["attributes", "tokio1"] }
+derive-getters = "0.2.0"
+derive-new = "0.5.9"
+anyhow = "1.0.40"
+async-trait = "0.1.50"
+strum = "0.21"
+strum_macros = "0.21"
+chrono = "0.4"
+chrono-tz = "0.5"
+rand = "0.8.4"
+downcast-rs = "1.2.0"
+uuid = { version="0.8", features=["v4"] }
+tonic = { version="0.4.3", features=["tls", "prost"] }
+prost = "0.7.0"
+prost-types = "0.7.0"
+thiserror = "1.0.25"
+serde = { version="1.0.126", features=["derive"] }
+json = { package="serde_json", version="1.0.64" }
+jwt = { package="jsonwebtoken", version="7.2.0" }
+http = "0.2.4"
+hyper = "0.14.9"
+hyper-rustls = "0.22.1"
+bytes = "1.0.1"
+test-case = "1.1.0"
+libmww_macro = { path="../libmww_macro" }
+async-graphql-actix-web = { git="https://github.com/async-graphql/async-graphql.git", branch="actix-web-v4-beta" }
+actix-web = "4.0.0-beta.8"
+actix-rt = "2.2.0"
+
+[dev-dependencies]
+test-case = "1.1.0"
+mockall = "0.10.2"
+async-std = { version="1.9.0", features=["attributes"] }
+
+[build-dependencies]
+tonic-build = "0.4.2"
