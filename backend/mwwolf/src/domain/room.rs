@@ -85,6 +85,14 @@ impl Room {
         Ok(room)
     }
 
+    pub fn join_player(&mut self, _: Id<Player>) -> DomainResult<()> {
+        todo!()
+    }
+
+    pub fn leave_player(&mut self, _: Id<Player>) -> DomainResult<()> {
+        todo!()
+    }
+
     fn validate(&self) -> DomainResult<()> {
         if self.player_count() <= self.wolf_count() {
             Err(DomainError::new(
@@ -215,6 +223,8 @@ mod tests {
                 datetime(2021, 8, 11, 12, 35, 15),
                 WolfGroup::new(vec![Id::new("player2"),Id::new("player3")], Word::try_new("foo").unwrap()),
                 CitizenGroup::new(vec![Id::new("player4"),Id::new("player5"),Id::new("player1")], Word::try_new("hoge").unwrap()),
+                VoteBox::new(vec![]),
+                TalkStatus::Started,
             ).unwrap()
         ) ; "max_players_is_5_and_given_2players"
     )]
@@ -250,6 +260,8 @@ mod tests {
                 datetime(2022, 8, 11, 12, 36, 15),
                 WolfGroup::new(vec![Id::new("player3"),Id::new("player4"),Id::new("player5")], Word::try_new("foo2").unwrap()),
                 CitizenGroup::new(vec![Id::new("player6"),Id::new("player7"),Id::new("player2")], Word::try_new("hoge2").unwrap()),
+                VoteBox::new(vec![]),
+                TalkStatus::Started,
             ).unwrap()
         ) ; "max_players_is_6_and_given_3players"
     )]
@@ -291,6 +303,8 @@ mod tests {
                 datetime(2021, 8, 11, 12, 35, 15),
                 WolfGroup::new(vec![Id::new("player2"),Id::new("player3")], Word::try_new("foo").unwrap()),
                 CitizenGroup::new(vec![Id::new("player4"),Id::new("player5"),Id::new("player1")], Word::try_new("hoge").unwrap()),
+                VoteBox::new(vec![]),
+                TalkStatus::Started,
             ).unwrap()
         ) ; "max_players_is_5_and_given_2players_return_multi_theme"
     )]
@@ -334,6 +348,8 @@ mod tests {
                     ended_at,
                     wolf_group,
                     citizen_group,
+                    VoteBox::new(vec![]),
+                    TalkStatus::Started,
                 ))
             },
         );

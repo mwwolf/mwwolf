@@ -29,6 +29,12 @@ impl TalkMinutes {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum TalkStatus {
+    Started,
+    Ended,
+}
+
 #[derive(new, Getters, Clone, Debug, PartialEq)]
 pub struct Talk {
     id: Id<Talk>,
@@ -37,6 +43,8 @@ pub struct Talk {
     ended_at: DateTime<Tz>,
     wolves: WolfGroup,
     citizen: CitizenGroup,
+    vote_box: VoteBox,
+    status: TalkStatus,
 }
 
 impl Talk {
@@ -47,6 +55,8 @@ impl Talk {
         ended_at: DateTime<Tz>,
         wolves: WolfGroup,
         citizen: CitizenGroup,
+        vote_box: VoteBox,
+        status: TalkStatus,
     ) -> DomainResult<Self> {
         let talk = Self {
             id,
@@ -55,9 +65,15 @@ impl Talk {
             ended_at,
             wolves,
             citizen,
+            vote_box,
+            status,
         };
         talk.validate()?;
         Ok(talk)
+    }
+
+    pub fn vote(&mut self, _: Vote) -> DomainResult<VoteResult> {
+        todo!()
     }
 
     fn validate(&self) -> DomainResult<()> {
@@ -117,6 +133,21 @@ impl Group {
         Ok(new_group)
     }
 }
+#[derive(new, Getters, Clone, Debug, PartialEq)]
+pub struct VoteResult {
+    is_end: bool,
+}
+
+#[derive(new, Getters, Clone, Debug, PartialEq)]
+pub struct VoteBox {
+    votes: Vec<Vote>,
+}
+
+#[derive(new, Getters, Clone, Debug, PartialEq)]
+pub struct Vote {
+    target: Id<Player>,
+    voter: Id<Player>,
+}
 
 #[cfg(test)]
 mod tests {
@@ -135,7 +166,9 @@ mod tests {
         Id::new("thema_1"),
         datetime(2021, 7, 30, 21, 19, 40),
         WolfGroup::new(vec![], Word::try_new("Test").unwrap()),
-        CitizenGroup::new(vec![], Word::try_new("Test2").unwrap())
+        CitizenGroup::new(vec![], Word::try_new("Test2").unwrap()),
+        VoteBox::new(vec![]),
+        TalkStatus::Started
      => Ok(Talk{
         id: Id::new("talk_1"),
         room_id:Id::new("room_1"),
@@ -143,6 +176,8 @@ mod tests {
         ended_at:  datetime(2021, 7, 30, 21, 19, 40),
         wolves:   WolfGroup::new(vec![], Word::try_new("Test").unwrap()),
         citizen:   CitizenGroup::new(vec![], Word::try_new("Test2").unwrap()),
+        vote_box: VoteBox::new(vec![]),
+        status:TalkStatus::Started,
     }))]
     fn talk_try_new_works(
         id: Id<Talk>,
@@ -151,8 +186,12 @@ mod tests {
         ended_at: DateTime<Tz>,
         wolves: WolfGroup,
         citizen: CitizenGroup,
+        vote_box: VoteBox,
+        status: TalkStatus,
     ) -> DomainResult<Talk> {
-        Talk::try_new(id, room_id, theme_id, ended_at, wolves, citizen)
+        Talk::try_new(
+            id, room_id, theme_id, ended_at, wolves, citizen, vote_box, status,
+        )
     }
 
     #[test_case(1 => Ok(TalkMinutes(Duration::minutes(1))))]
