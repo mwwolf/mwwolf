@@ -85,8 +85,12 @@ impl Room {
         Ok(room)
     }
 
-    pub fn join_player(&mut self, _: Id<Player>) -> DomainResult<()> {
-        todo!()
+    pub fn join_player(&mut self, player_id: Id<Player>) -> DomainResult<()> {
+        let mut new_room = self.clone();
+        new_room.all_players.push(player_id);
+        new_room.validate()?;
+        *self = new_room;
+        Ok(())
     }
 
     pub fn leave_player(&mut self, _: Id<Player>) -> DomainResult<()> {
@@ -97,8 +101,16 @@ impl Room {
         if self.player_count() <= self.wolf_count() {
             Err(DomainError::new(
                 DomainErrorKind::InvalidInput,
-                "player_count must be bigger than wold count",
+                "player_count must be bigger than wolf count",
             ))
+        } else if &self.all_players().len() > self.player_count().raw_player_count() {
+            Err(DomainError::new(
+                DomainErrorKind::InvalidInput,
+                format!(
+                    "player count is begger than max player count. current player count is {}, max player count is {}",
+                    self.all_players().len(),
+                    self.player_count().raw_player_count(),
+                )))
         } else {
             Ok(())
         }
@@ -433,7 +445,7 @@ mod tests {
         TalkMinutes::try_new(4).unwrap(),
         ThemeKind::try_new("theme2").unwrap()
         =>
-        Err(DomainError::new(DomainErrorKind::InvalidInput, "player_count must be bigger than wold count"))
+        Err(DomainError::new(DomainErrorKind::InvalidInput, "player_count must be bigger than wolf count"))
     )]
     fn room_try_new_works(
         id: Id<Room>,
@@ -453,5 +465,81 @@ mod tests {
             talk_time,
             theme_kind,
         )
+    }
+
+    #[test_case(
+        Room{
+            id: Id::new("room1"),
+            player_count: PlayerCount::try_new(3).unwrap(),
+            wolf_count: WolfCount::try_new(1).unwrap(),
+            host_player_id: Id::new("player1"),
+            all_players: vec![Id::new("player1"), Id::new("player2"), Id::new("player3")],
+            talk_time: TalkMinutes::try_new(4).unwrap(),
+            theme_kind: ThemeKind::try_new("theme1").unwrap(),
+        } => Ok(()) ; "success"
+    )]
+    #[test_case(
+        Room{
+            id: Id::new("room1"),
+            player_count: PlayerCount::try_new(3).unwrap(),
+            wolf_count: WolfCount::try_new(3).unwrap(),
+            host_player_id: Id::new("player1"),
+            all_players: vec![Id::new("player1"), Id::new("player2"), Id::new("player3")],
+            talk_time: TalkMinutes::try_new(4).unwrap(),
+            theme_kind: ThemeKind::try_new("theme1").unwrap(),
+        } => Err(DomainError::new(
+                DomainErrorKind::InvalidInput,
+                "player_count must be bigger than wolf count",
+            )) ; "wolf_count >= player_count"
+    )]
+    #[test_case(
+        Room{
+            id: Id::new("room1"),
+            player_count: PlayerCount::try_new(3).unwrap(),
+            wolf_count: WolfCount::try_new(1).unwrap(),
+            host_player_id: Id::new("player1"),
+            all_players: vec![Id::new("player1"), Id::new("player2"), Id::new("player3"), Id::new("player4")],
+            talk_time: TalkMinutes::try_new(4).unwrap(),
+            theme_kind: ThemeKind::try_new("theme1").unwrap(),
+        } => Err(DomainError::new(
+                DomainErrorKind::InvalidInput,
+                "player count is begger than max player count. current player count is 4, max player count is 3",
+            )) ; "current player_count > max player_count"
+    )]
+    fn room_validate_works(room: Room) -> DomainResult<()> {
+        room.validate()
+    }
+
+    #[test_case(
+        Room{
+            id: Id::new("room1"),
+            player_count: PlayerCount::try_new(3).unwrap(),
+            wolf_count: WolfCount::try_new(1).unwrap(),
+            host_player_id: Id::new("player1"),
+            all_players: vec![Id::new("player1")],
+            talk_time: TalkMinutes::try_new(4).unwrap(),
+            theme_kind: ThemeKind::try_new("theme1").unwrap(),
+        },
+        Id::new("player2")
+        => Ok(())
+    )]
+    #[test_case(
+        Room{
+            id: Id::new("room1"),
+            player_count: PlayerCount::try_new(3).unwrap(),
+            wolf_count: WolfCount::try_new(1).unwrap(),
+            host_player_id: Id::new("player1"),
+            all_players: vec![Id::new("player1"), Id::new("player2"), Id::new("player3")],
+            talk_time: TalkMinutes::try_new(4).unwrap(),
+            theme_kind: ThemeKind::try_new("theme1").unwrap(),
+        },
+        Id::new("player4")
+        => Err(DomainError::new(
+                DomainErrorKind::InvalidInput,
+                "player count is begger than max player count. current player count is 4, max player count is 3",
+            )) ; "current player_count > max player_count"
+    )]
+    fn room_join_player_works(mut room: Room, palyer_id: Id<Player>) -> DomainResult<()> {
+        room.join_player(palyer_id)
     }
 }
