@@ -29,6 +29,12 @@ impl TalkMinutes {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum TalkStatus {
+    Started,
+    Ended,
+}
+
 #[derive(new, Getters, Clone, Debug, PartialEq)]
 pub struct Talk {
     id: Id<Talk>,
@@ -37,6 +43,8 @@ pub struct Talk {
     ended_at: DateTime<Tz>,
     wolves: WolfGroup,
     citizen: CitizenGroup,
+    vote_box: VoteBox,
+    status: TalkStatus,
 }
 
 impl Talk {
@@ -47,6 +55,8 @@ impl Talk {
         ended_at: DateTime<Tz>,
         wolves: WolfGroup,
         citizen: CitizenGroup,
+        vote_box: VoteBox,
+        status: TalkStatus,
     ) -> DomainResult<Self> {
         let talk = Self {
             id,
@@ -55,9 +65,26 @@ impl Talk {
             ended_at,
             wolves,
             citizen,
+            vote_box,
+            status,
         };
         talk.validate()?;
         Ok(talk)
+    }
+
+    pub fn vote(&mut self, vote: Vote) -> DomainResult<VoteResult> {
+        if *self.status() == TalkStatus::Ended {
+            Err(DomainError::new(DomainErrorKind::Fail, "talk is ended"))
+        } else {
+            self.vote_box = self.vote_box.new_with_added(vote)?;
+            Ok(VoteResult::new(
+                self.all_player_count() == self.vote_box.votes.len(),
+            ))
+        }
+    }
+
+    fn all_player_count(&self) -> usize {
+        self.wolves.players().len() + self.citizen.players().len()
     }
 
     fn validate(&self) -> DomainResult<()> {
@@ -78,43 +105,62 @@ pub trait TalkFactory {
     ) -> DomainResult<Talk>;
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct WolfGroup(Group);
-
-impl WolfGroup {
-    pub fn new(players: Vec<Id<Player>>, word: Word) -> Self {
-        Self(Group::new(players, word))
-    }
-
-    pub fn new_with_added(&self, id: Id<Player>) -> DomainResult<Self> {
-        Ok(Self(self.0.new_with_added(id)?))
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct CitizenGroup(Group);
-
-impl CitizenGroup {
-    pub fn new(players: Vec<Id<Player>>, word: Word) -> Self {
-        Self(Group::new(players, word))
-    }
-
-    pub fn new_with_added(&self, id: Id<Player>) -> DomainResult<Self> {
-        Ok(Self(self.0.new_with_added(id)?))
-    }
-}
-
 #[derive(new, Getters, Clone, Debug, PartialEq)]
-struct Group {
+pub struct WolfGroup {
     players: Vec<Id<Player>>,
     word: Word,
 }
 
-impl Group {
-    fn new_with_added(&self, id: Id<Player>) -> DomainResult<Group> {
+impl WolfGroup {
+    pub fn new_with_added(&self, id: Id<Player>) -> DomainResult<Self> {
         let mut new_group = self.clone();
         new_group.players.push(id);
         Ok(new_group)
+    }
+}
+
+#[derive(new, Getters, Clone, Debug, PartialEq)]
+pub struct CitizenGroup {
+    players: Vec<Id<Player>>,
+    word: Word,
+}
+
+impl CitizenGroup {
+    pub fn new_with_added(&self, id: Id<Player>) -> DomainResult<Self> {
+        let mut new_group = self.clone();
+        new_group.players.push(id);
+        Ok(new_group)
+    }
+}
+
+#[derive(new, Getters, Clone, Debug, PartialEq)]
+pub struct VoteResult {
+    is_end: bool,
+}
+
+#[derive(new, Getters, Clone, Debug, PartialEq)]
+pub struct VoteBox {
+    votes: Vec<Vote>,
+}
+
+#[derive(new, Getters, Clone, Debug, PartialEq)]
+pub struct Vote {
+    target: Id<Player>,
+    voter: Id<Player>,
+}
+
+impl VoteBox {
+    fn new_with_added(&self, vote: Vote) -> DomainResult<VoteBox> {
+        if self.votes.iter().any(|v| v.voter == vote.voter) {
+            Err(DomainError::new(
+                DomainErrorKind::InvalidInput,
+                format!("already voted in voter. vote:{:?}", vote),
+            ))
+        } else {
+            let mut new_votes = self.votes.clone();
+            new_votes.push(vote);
+            Ok(VoteBox { votes: new_votes })
+        }
     }
 }
 
@@ -135,7 +181,9 @@ mod tests {
         Id::new("thema_1"),
         datetime(2021, 7, 30, 21, 19, 40),
         WolfGroup::new(vec![], Word::try_new("Test").unwrap()),
-        CitizenGroup::new(vec![], Word::try_new("Test2").unwrap())
+        CitizenGroup::new(vec![], Word::try_new("Test2").unwrap()),
+        VoteBox::new(vec![]),
+        TalkStatus::Started
      => Ok(Talk{
         id: Id::new("talk_1"),
         room_id:Id::new("room_1"),
@@ -143,6 +191,8 @@ mod tests {
         ended_at:  datetime(2021, 7, 30, 21, 19, 40),
         wolves:   WolfGroup::new(vec![], Word::try_new("Test").unwrap()),
         citizen:   CitizenGroup::new(vec![], Word::try_new("Test2").unwrap()),
+        vote_box: VoteBox::new(vec![]),
+        status:TalkStatus::Started,
     }))]
     fn talk_try_new_works(
         id: Id<Talk>,
@@ -151,8 +201,12 @@ mod tests {
         ended_at: DateTime<Tz>,
         wolves: WolfGroup,
         citizen: CitizenGroup,
+        vote_box: VoteBox,
+        status: TalkStatus,
     ) -> DomainResult<Talk> {
-        Talk::try_new(id, room_id, theme_id, ended_at, wolves, citizen)
+        Talk::try_new(
+            id, room_id, theme_id, ended_at, wolves, citizen, vote_box, status,
+        )
     }
 
     #[test_case(1 => Ok(TalkMinutes(Duration::minutes(1))))]
@@ -184,5 +238,78 @@ mod tests {
         started_at: DateTime<Tz>,
     ) -> DateTime<Tz> {
         talk_time.calc_ended_at(&started_at)
+    }
+
+    #[test_case(
+        Talk::new(
+            Id::new("talk1"),
+            Id::new("room_id"),
+            Id::new("theme"),
+            datetime(2021, 3, 4, 3, 2, 1),
+            WolfGroup::new(vec![Id::new("player1")], Word::try_new("word1").unwrap()),
+            CitizenGroup::new(vec![Id::new("player2")], Word::try_new("word2").unwrap()),
+            VoteBox::new(vec![]),
+            TalkStatus::Started,
+        ),
+        Vote::new(Id::new("player1"),Id::new("player2")),
+        VoteBox::new(vec![Vote::new(Id::new("player1"),Id::new("player2"))])
+        => Ok(VoteResult::new(false));"succeed but not yet end"
+        )]
+    #[test_case(
+        Talk::new(
+            Id::new("talk1"),
+            Id::new("room_id"),
+            Id::new("theme"),
+            datetime(2021, 3, 4, 3, 2, 1),
+            WolfGroup::new(vec![Id::new("player1")], Word::try_new("word1").unwrap()),
+            CitizenGroup::new(vec![Id::new("player2")], Word::try_new("word2").unwrap()),
+            VoteBox::new(vec![Vote::new(Id::new("player2"),Id::new("player1"))]),
+            TalkStatus::Started,
+        ),
+        Vote::new(Id::new("player1"),Id::new("player2")),
+        VoteBox::new(vec![Vote::new(Id::new("player2"),Id::new("player1")),Vote::new(Id::new("player1"),Id::new("player2"))])
+        => Ok(VoteResult::new(true));"succeed and end"
+        )]
+    #[test_case(
+        Talk::new(
+            Id::new("talk1"),
+            Id::new("room_id"),
+            Id::new("theme"),
+            datetime(2021, 3, 4, 3, 2, 1),
+            WolfGroup::new(vec![Id::new("player1")], Word::try_new("word1").unwrap()),
+            CitizenGroup::new(vec![Id::new("player2")], Word::try_new("word2").unwrap()),
+            VoteBox::new(vec![]),
+            TalkStatus::Ended,
+        ),
+        Vote::new(Id::new("player1"),Id::new("player2")),
+        VoteBox::new(vec![])
+        => Err(DomainError::new(DomainErrorKind::Fail, "talk is ended"));"talk is ended"
+        )]
+    #[test_case(
+        Talk::new(
+            Id::new("talk1"),
+            Id::new("room_id"),
+            Id::new("theme"),
+            datetime(2021, 3, 4, 3, 2, 1),
+            WolfGroup::new(vec![Id::new("player1")], Word::try_new("word1").unwrap()),
+            CitizenGroup::new(vec![Id::new("player2")], Word::try_new("word2").unwrap()),
+            VoteBox::new(vec![Vote::new(Id::new("player1"),Id::new("player2"))]),
+            TalkStatus::Started,
+        ),
+        Vote::new(Id::new("player1"),Id::new("player2")),
+        VoteBox::new(vec![Vote::new(Id::new("player1"),Id::new("player2"))])
+        => Err(DomainError::new(
+                DomainErrorKind::InvalidInput,
+                format!("already voted in voter. vote:{:?}", Vote::new(Id::new("player1"),Id::new("player2"))),
+            ));"already voted"
+        )]
+    fn talk_vote_works(
+        mut talk: Talk,
+        vote: Vote,
+        expected_vote_box: VoteBox,
+    ) -> DomainResult<VoteResult> {
+        let result = talk.vote(vote);
+        assert_eq!(expected_vote_box, *talk.vote_box());
+        result
     }
 }
