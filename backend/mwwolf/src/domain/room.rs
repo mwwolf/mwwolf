@@ -88,13 +88,32 @@ impl Room {
     pub fn join_player(&mut self, player_id: Id<Player>) -> DomainResult<()> {
         let mut new_room = self.clone();
         new_room.all_players.push(player_id);
+        new_room.all_players.sort();
         new_room.validate()?;
         *self = new_room;
         Ok(())
     }
 
-    pub fn leave_player(&mut self, _: Id<Player>) -> DomainResult<()> {
-        todo!()
+    pub fn leave_player(&mut self, player_id: &Id<Player>) -> DomainResult<()> {
+        if &self.host_player_id == player_id {
+            Err(DomainError::new(
+                DomainErrorKind::InvalidInput,
+                format!("player_id:{} is host", player_id),
+            ))
+        } else {
+            if let Some(index) = self.all_players.iter().position(|id| id == player_id) {
+                let mut new_room = self.clone();
+                new_room.all_players.remove(index);
+                new_room.validate()?;
+                *self = new_room;
+                Ok(())
+            } else {
+                Err(DomainError::new(
+                    DomainErrorKind::InvalidInput,
+                    format!("not exists player_id:{}", player_id),
+                ))
+            }
+        }
     }
 
     fn validate(&self) -> DomainResult<()> {
@@ -111,9 +130,26 @@ impl Room {
                     self.all_players().len(),
                     self.player_count().raw_player_count(),
                 )))
+        } else if self.has_duplicate_players() {
+            Err(DomainError::new(
+                DomainErrorKind::InvalidInput,
+                "all_players must not be duplicate",
+            ))
         } else {
             Ok(())
         }
+    }
+    fn has_duplicate_players(&self) -> bool {
+        let mut before = None;
+        for player_id in self.all_players().iter() {
+            if let Some(id) = before {
+                if id == player_id {
+                    return true;
+                }
+            }
+            before = Some(player_id);
+        }
+        false
     }
 }
 
@@ -520,7 +556,8 @@ mod tests {
             talk_time: TalkMinutes::try_new(4).unwrap(),
             theme_kind: ThemeKind::try_new("theme1").unwrap(),
         },
-        Id::new("player2")
+        Id::new("player2"),
+        &[Id::new("player1"), Id::new("player2")]
         => Ok(())
     )]
     #[test_case(
@@ -533,13 +570,78 @@ mod tests {
             talk_time: TalkMinutes::try_new(4).unwrap(),
             theme_kind: ThemeKind::try_new("theme1").unwrap(),
         },
-        Id::new("player4")
+        Id::new("player4"),
+        &[Id::new("player1"), Id::new("player2"), Id::new("player3")]
         => Err(DomainError::new(
                 DomainErrorKind::InvalidInput,
                 "player count is begger than max player count. current player count is 4, max player count is 3",
             )) ; "current player_count > max player_count"
     )]
-    fn room_join_player_works(mut room: Room, palyer_id: Id<Player>) -> DomainResult<()> {
-        room.join_player(palyer_id)
+    #[test_case(
+        Room{
+            id: Id::new("room1"),
+            player_count: PlayerCount::try_new(4).unwrap(),
+            wolf_count: WolfCount::try_new(1).unwrap(),
+            host_player_id: Id::new("player1"),
+            all_players: vec![Id::new("player1"), Id::new("player2"), Id::new("player3")],
+            talk_time: TalkMinutes::try_new(4).unwrap(),
+            theme_kind: ThemeKind::try_new("theme1").unwrap(),
+        },
+        Id::new("player3"),
+        &[Id::new("player1"), Id::new("player2"), Id::new("player3")]
+        => Err(DomainError::new(
+                DomainErrorKind::InvalidInput,
+                "all_players must not be duplicate",
+            )) ; "player is duplicate"
+    )]
+    fn room_join_player_works(
+        mut room: Room,
+        palyer_id: Id<Player>,
+        expected_all_players: &[Id<Player>],
+    ) -> DomainResult<()> {
+        let result = room.join_player(palyer_id);
+        assert_eq!(expected_all_players, room.all_players());
+        result
+    }
+
+    #[test_case(
+        Room{
+            id: Id::new("room1"),
+            player_count: PlayerCount::try_new(3).unwrap(),
+            wolf_count: WolfCount::try_new(1).unwrap(),
+            host_player_id: Id::new("player1"),
+            all_players: vec![Id::new("player1"),Id::new("player2")],
+            talk_time: TalkMinutes::try_new(4).unwrap(),
+            theme_kind: ThemeKind::try_new("theme1").unwrap(),
+        },
+        Id::new("player2"),
+        &[Id::new("player1")]
+        => Ok(());"succeed leave"
+    )]
+    #[test_case(
+        Room{
+            id: Id::new("room1"),
+            player_count: PlayerCount::try_new(3).unwrap(),
+            wolf_count: WolfCount::try_new(1).unwrap(),
+            host_player_id: Id::new("player1"),
+            all_players: vec![Id::new("player1"),Id::new("player2")],
+            talk_time: TalkMinutes::try_new(4).unwrap(),
+            theme_kind: ThemeKind::try_new("theme1").unwrap(),
+        },
+        Id::new("player1"),
+        &[Id::new("player1"),Id::new("player2")]
+        => Err(DomainError::new(
+                DomainErrorKind::InvalidInput,
+                format!("player_id:{} is host", "player1"),
+            ));"can not leave host"
+    )]
+    fn room_leave_player_works(
+        mut room: Room,
+        player_id: Id<Player>,
+        expected_all_players: &[Id<Player>],
+    ) -> DomainResult<()> {
+        let result = room.leave_player(&player_id);
+        assert_eq!(expected_all_players, room.all_players());
+        result
     }
 }
