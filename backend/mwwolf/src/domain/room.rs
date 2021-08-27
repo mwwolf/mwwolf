@@ -100,19 +100,17 @@ impl Room {
                 DomainErrorKind::InvalidInput,
                 format!("player_id:{} is host", player_id),
             ))
+        } else if let Some(index) = self.all_players.iter().position(|id| id == player_id) {
+            let mut new_room = self.clone();
+            new_room.all_players.remove(index);
+            new_room.validate()?;
+            *self = new_room;
+            Ok(())
         } else {
-            if let Some(index) = self.all_players.iter().position(|id| id == player_id) {
-                let mut new_room = self.clone();
-                new_room.all_players.remove(index);
-                new_room.validate()?;
-                *self = new_room;
-                Ok(())
-            } else {
-                Err(DomainError::new(
-                    DomainErrorKind::InvalidInput,
-                    format!("not exists player_id:{}", player_id),
-                ))
-            }
+            Err(DomainError::new(
+                DomainErrorKind::InvalidInput,
+                format!("not exists player_id:{}", player_id),
+            ))
         }
     }
 
