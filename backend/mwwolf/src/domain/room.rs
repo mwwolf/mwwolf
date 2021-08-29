@@ -58,7 +58,7 @@ pub struct Room {
     wolf_count: WolfCount,
     host_player_id: Id<Player>,
     all_players: Vec<Id<Player>>,
-    talk_time: TalkMinutes,
+    game_time: GameMinutes,
     theme_kind: ThemeKind,
 }
 
@@ -69,7 +69,7 @@ impl Room {
         wolf_count: WolfCount,
         host_player_id: Id<Player>,
         all_players: Vec<Id<Player>>,
-        talk_time: TalkMinutes,
+        game_time: GameMinutes,
         theme_kind: ThemeKind,
     ) -> DomainResult<Self> {
         let room = Room {
@@ -78,7 +78,7 @@ impl Room {
             wolf_count,
             host_player_id,
             all_players,
-            talk_time,
+            game_time,
             theme_kind,
         };
         room.validate()?;
@@ -152,7 +152,7 @@ impl Room {
 }
 
 pub trait RoomServiceTypeParameters {
-    type TalkFactory: TalkFactory;
+    type GameFactory: GameFactory;
     type ThemeRepository: ThemeRepository;
     type DateTimeGen: time::DateTimeGen;
     type RngCore: rand::RngCore;
@@ -160,14 +160,14 @@ pub trait RoomServiceTypeParameters {
 
 #[derive(new)]
 pub struct RoomService<RST: RoomServiceTypeParameters> {
-    talk_factory: RST::TalkFactory,
+    game_factory: RST::GameFactory,
     theme_repository: RST::ThemeRepository,
     date_time_gen: RST::DateTimeGen,
     rng_core: RefCell<RST::RngCore>,
 }
 
 impl<RST: RoomServiceTypeParameters> RoomService<RST> {
-    pub async fn start_talk(&self, room: &Room) -> DomainResult<Talk> {
+    pub async fn start_game(&self, room: &Room) -> DomainResult<Game> {
         match self.theme_repository.find_by_kind(room.theme_kind()).await {
             Ok(themes) => {
                 let theme = themes
@@ -190,9 +190,9 @@ impl<RST: RoomServiceTypeParameters> RoomService<RST> {
                 let (wolf_word, citizen_word) = theme.choice_word(&mut *self.rng_core.borrow_mut());
                 let wolf_group = WolfGroup::new(wolfs, wolf_word.clone());
                 let citizen_group = CitizenGroup::new(citizen, citizen_word.clone());
-                let ended_at = room.talk_time().calc_ended_at(&self.date_time_gen.now());
+                let ended_at = room.game_time().calc_ended_at(&self.date_time_gen.now());
 
-                self.talk_factory
+                self.game_factory
                     .create(
                         room.id().clone(),
                         theme.id().clone(),
@@ -232,7 +232,7 @@ mod tests {
 
     impl RoomServiceTypeParameters for MockRoomServiceTypeParameter {
         type ThemeRepository = MockThemeRepository;
-        type TalkFactory = MockTalkFactory;
+        type GameFactory = MockGameFactory;
         type DateTimeGen = time::MockDateTimeGen;
         type RngCore = rand::rngs::mock::StepRng;
     }
@@ -244,11 +244,11 @@ mod tests {
             WolfCount::try_new(2).unwrap(),
             Id::new("player1"),
             vec![Id::new("player1"), Id::new("player2"),Id::new("player3"),Id::new("player4"),Id::new("player5")],
-            TalkMinutes::try_new(5).unwrap(),
+            GameMinutes::try_new(5).unwrap(),
             ThemeKind::try_new("theme_kind1").unwrap(),
         ).unwrap(),
         datetime(2021, 8, 11, 12, 30, 15),
-        Id::new("talk1"),
+        Id::new("game1"),
         Ok(
             vec![
                 Theme::new(
@@ -262,15 +262,15 @@ mod tests {
         StepRng::new(0, 1)
         =>
         Ok(
-            Talk::try_new(
-                Id::new("talk1"),
+            Game::try_new(
+                Id::new("game1"),
                 Id::new("room1"),
                 Id::new("theme1"),
                 datetime(2021, 8, 11, 12, 35, 15),
                 WolfGroup::new(vec![Id::new("player2"),Id::new("player3")], Word::try_new("foo").unwrap()),
                 CitizenGroup::new(vec![Id::new("player4"),Id::new("player5"),Id::new("player1")], Word::try_new("hoge").unwrap()),
                 VoteBox::new(vec![]),
-                TalkStatus::Talking,
+                GameStatus::Gameing,
             ).unwrap()
         ) ; "max_players_is_5_and_given_2players"
     )]
@@ -281,11 +281,11 @@ mod tests {
             WolfCount::try_new(3).unwrap(),
             Id::new("player2"),
             vec![Id::new("player2"), Id::new("player3"),Id::new("player4"),Id::new("player5"),Id::new("player6"), Id::new("player7")],
-            TalkMinutes::try_new(6).unwrap(),
+            GameMinutes::try_new(6).unwrap(),
             ThemeKind::try_new("theme_kind2").unwrap(),
         ).unwrap(),
         datetime(2022, 8, 11, 12, 30, 15),
-        Id::new("talk2"),
+        Id::new("game2"),
         Ok(
             vec![
                 Theme::new(
@@ -299,15 +299,15 @@ mod tests {
         StepRng::new(0, 1)
         =>
         Ok(
-            Talk::try_new(
-                Id::new("talk2"),
+            Game::try_new(
+                Id::new("game2"),
                 Id::new("room2"),
                 Id::new("theme2"),
                 datetime(2022, 8, 11, 12, 36, 15),
                 WolfGroup::new(vec![Id::new("player3"),Id::new("player4"),Id::new("player5")], Word::try_new("foo2").unwrap()),
                 CitizenGroup::new(vec![Id::new("player6"),Id::new("player7"),Id::new("player2")], Word::try_new("hoge2").unwrap()),
                 VoteBox::new(vec![]),
-                TalkStatus::Talking,
+                GameStatus::Gameing,
             ).unwrap()
         ) ; "max_players_is_6_and_given_3players"
     )]
@@ -318,11 +318,11 @@ mod tests {
             WolfCount::try_new(2).unwrap(),
             Id::new("player1"),
             vec![Id::new("player1"), Id::new("player2"),Id::new("player3"),Id::new("player4"),Id::new("player5")],
-            TalkMinutes::try_new(5).unwrap(),
+            GameMinutes::try_new(5).unwrap(),
             ThemeKind::try_new("theme_kind1").unwrap(),
         ).unwrap(),
         datetime(2021, 8, 11, 12, 30, 15),
-        Id::new("talk1"),
+        Id::new("game1"),
         Ok(
             vec![
                 Theme::new(
@@ -342,15 +342,15 @@ mod tests {
         StepRng::new(0, 1)
         =>
         Ok(
-            Talk::try_new(
-                Id::new("talk1"),
+            Game::try_new(
+                Id::new("game1"),
                 Id::new("room1"),
                 Id::new("theme1"),
                 datetime(2021, 8, 11, 12, 35, 15),
                 WolfGroup::new(vec![Id::new("player2"),Id::new("player3")], Word::try_new("foo").unwrap()),
                 CitizenGroup::new(vec![Id::new("player4"),Id::new("player5"),Id::new("player1")], Word::try_new("hoge").unwrap()),
                 VoteBox::new(vec![]),
-                TalkStatus::Talking,
+                GameStatus::Gameing,
             ).unwrap()
         ) ; "max_players_is_5_and_given_2players_return_multi_theme"
     )]
@@ -361,11 +361,11 @@ mod tests {
             WolfCount::try_new(2).unwrap(),
             Id::new("player1"),
             vec![Id::new("player1"), Id::new("player2"),Id::new("player3"),Id::new("player4"),Id::new("player5")],
-            TalkMinutes::try_new(5).unwrap(),
+            GameMinutes::try_new(5).unwrap(),
             ThemeKind::try_new("theme_kind1").unwrap(),
         ).unwrap(),
         datetime(2021, 8, 11, 12, 30, 15),
-        Id::new("talk1"),
+        Id::new("game1"),
         Ok(vec![]),
         StepRng::new(0, 1)
         =>
@@ -374,28 +374,28 @@ mod tests {
         ) ; "fail_max_players_is_5_and_given_2players_return_zero_theme"
     )]
     #[async_std::test]
-    async fn room_start_talk_works(
+    async fn room_start_game_works(
         room: Room,
         now: DateTime<Tz>,
-        new_talk_id: Id<Talk>,
+        new_game_id: Id<Game>,
         return_themes_result: RepositoryResult<Vec<Theme>>,
         step_rng: rand::rngs::mock::StepRng,
-    ) -> DomainResult<Talk> {
+    ) -> DomainResult<Game> {
         let mut mock_date_time_gen = time::MockDateTimeGen::new();
         mock_date_time_gen.expect_now().returning(move || now);
 
-        let mut mock_talk_factory = MockTalkFactory::new();
-        mock_talk_factory.expect_create().returning(
+        let mut mock_game_factory = MockGameFactory::new();
+        mock_game_factory.expect_create().returning(
             move |room_id, theme_id, ended_at, wolf_group, citizen_group| {
-                Ok(Talk::new(
-                    new_talk_id.clone(),
+                Ok(Game::new(
+                    new_game_id.clone(),
                     room_id,
                     theme_id,
                     ended_at,
                     wolf_group,
                     citizen_group,
                     VoteBox::new(vec![]),
-                    TalkStatus::Talking,
+                    GameStatus::Gameing,
                 ))
             },
         );
@@ -410,12 +410,12 @@ mod tests {
             });
 
         let room_service = RoomService::<MockRoomServiceTypeParameter>::new(
-            mock_talk_factory,
+            mock_game_factory,
             mock_theme_repository,
             mock_date_time_gen,
             RefCell::new(step_rng),
         );
-        room_service.start_talk(&room).await
+        room_service.start_game(&room).await
     }
 
     #[test_case(0 => Err(DomainError::new(DomainErrorKind::InvalidInput, "raw_count should not be zero")))]
@@ -438,7 +438,7 @@ mod tests {
         WolfCount::try_new(4).unwrap(),
         Id::new("player1"),
         vec![],
-        TalkMinutes::try_new(3).unwrap(),
+        GameMinutes::try_new(3).unwrap(),
         ThemeKind::try_new("theme1").unwrap()
         =>
         Ok(Room {
@@ -447,7 +447,7 @@ mod tests {
             wolf_count: WolfCount::try_new(4).unwrap(),
             host_player_id: Id::new("player1"),
             all_players: vec![],
-            talk_time: TalkMinutes::try_new(3).unwrap(),
+            game_time: GameMinutes::try_new(3).unwrap(),
             theme_kind: ThemeKind::try_new("theme1").unwrap(),
         })
     )]
@@ -457,7 +457,7 @@ mod tests {
         WolfCount::try_new(5).unwrap(),
         Id::new("player2"),
         vec![],
-        TalkMinutes::try_new(4).unwrap(),
+        GameMinutes::try_new(4).unwrap(),
         ThemeKind::try_new("theme2").unwrap()
         =>
         Ok(Room {
@@ -466,7 +466,7 @@ mod tests {
             wolf_count: WolfCount::try_new(5).unwrap(),
             host_player_id: Id::new("player2"),
             all_players: vec![],
-            talk_time: TalkMinutes::try_new(4).unwrap(),
+            game_time: GameMinutes::try_new(4).unwrap(),
             theme_kind: ThemeKind::try_new("theme2").unwrap(),
         })
     )]
@@ -476,7 +476,7 @@ mod tests {
         WolfCount::try_new(5).unwrap(),
         Id::new("player2"),
         vec![],
-        TalkMinutes::try_new(4).unwrap(),
+        GameMinutes::try_new(4).unwrap(),
         ThemeKind::try_new("theme2").unwrap()
         =>
         Err(DomainError::new(DomainErrorKind::InvalidInput, "player_count must be bigger than wolf count"))
@@ -487,7 +487,7 @@ mod tests {
         wolf_count: WolfCount,
         host_player_id: Id<Player>,
         all_players: Vec<Id<Player>>,
-        talk_time: TalkMinutes,
+        game_time: GameMinutes,
         theme_kind: ThemeKind,
     ) -> DomainResult<Room> {
         Room::try_new(
@@ -496,7 +496,7 @@ mod tests {
             wolf_count,
             host_player_id,
             all_players,
-            talk_time,
+            game_time,
             theme_kind,
         )
     }
@@ -508,7 +508,7 @@ mod tests {
             wolf_count: WolfCount::try_new(1).unwrap(),
             host_player_id: Id::new("player1"),
             all_players: vec![Id::new("player1"), Id::new("player2"), Id::new("player3")],
-            talk_time: TalkMinutes::try_new(4).unwrap(),
+            game_time: GameMinutes::try_new(4).unwrap(),
             theme_kind: ThemeKind::try_new("theme1").unwrap(),
         } => Ok(()) ; "success"
     )]
@@ -519,7 +519,7 @@ mod tests {
             wolf_count: WolfCount::try_new(3).unwrap(),
             host_player_id: Id::new("player1"),
             all_players: vec![Id::new("player1"), Id::new("player2"), Id::new("player3")],
-            talk_time: TalkMinutes::try_new(4).unwrap(),
+            game_time: GameMinutes::try_new(4).unwrap(),
             theme_kind: ThemeKind::try_new("theme1").unwrap(),
         } => Err(DomainError::new(
                 DomainErrorKind::InvalidInput,
@@ -533,7 +533,7 @@ mod tests {
             wolf_count: WolfCount::try_new(1).unwrap(),
             host_player_id: Id::new("player1"),
             all_players: vec![Id::new("player1"), Id::new("player2"), Id::new("player3"), Id::new("player4")],
-            talk_time: TalkMinutes::try_new(4).unwrap(),
+            game_time: GameMinutes::try_new(4).unwrap(),
             theme_kind: ThemeKind::try_new("theme1").unwrap(),
         } => Err(DomainError::new(
                 DomainErrorKind::InvalidInput,
@@ -551,7 +551,7 @@ mod tests {
             wolf_count: WolfCount::try_new(1).unwrap(),
             host_player_id: Id::new("player1"),
             all_players: vec![Id::new("player1")],
-            talk_time: TalkMinutes::try_new(4).unwrap(),
+            game_time: GameMinutes::try_new(4).unwrap(),
             theme_kind: ThemeKind::try_new("theme1").unwrap(),
         },
         Id::new("player2"),
@@ -565,7 +565,7 @@ mod tests {
             wolf_count: WolfCount::try_new(1).unwrap(),
             host_player_id: Id::new("player1"),
             all_players: vec![Id::new("player1"), Id::new("player2"), Id::new("player3")],
-            talk_time: TalkMinutes::try_new(4).unwrap(),
+            game_time: GameMinutes::try_new(4).unwrap(),
             theme_kind: ThemeKind::try_new("theme1").unwrap(),
         },
         Id::new("player4"),
@@ -582,7 +582,7 @@ mod tests {
             wolf_count: WolfCount::try_new(1).unwrap(),
             host_player_id: Id::new("player1"),
             all_players: vec![Id::new("player1"), Id::new("player2"), Id::new("player3")],
-            talk_time: TalkMinutes::try_new(4).unwrap(),
+            game_time: GameMinutes::try_new(4).unwrap(),
             theme_kind: ThemeKind::try_new("theme1").unwrap(),
         },
         Id::new("player3"),
@@ -609,7 +609,7 @@ mod tests {
             wolf_count: WolfCount::try_new(1).unwrap(),
             host_player_id: Id::new("player1"),
             all_players: vec![Id::new("player1"),Id::new("player2")],
-            talk_time: TalkMinutes::try_new(4).unwrap(),
+            game_time: GameMinutes::try_new(4).unwrap(),
             theme_kind: ThemeKind::try_new("theme1").unwrap(),
         },
         Id::new("player2"),
@@ -623,7 +623,7 @@ mod tests {
             wolf_count: WolfCount::try_new(1).unwrap(),
             host_player_id: Id::new("player1"),
             all_players: vec![Id::new("player1"),Id::new("player2")],
-            talk_time: TalkMinutes::try_new(4).unwrap(),
+            game_time: GameMinutes::try_new(4).unwrap(),
             theme_kind: ThemeKind::try_new("theme1").unwrap(),
         },
         Id::new("player1"),
