@@ -270,7 +270,7 @@ mod tests {
                 WolfGroup::new(vec![Id::new("player2"),Id::new("player3")], Word::try_new("foo").unwrap()),
                 CitizenGroup::new(vec![Id::new("player4"),Id::new("player5"),Id::new("player1")], Word::try_new("hoge").unwrap()),
                 VoteBox::new(vec![]),
-                TalkStatus::Started,
+                TalkStatus::Talking,
             ).unwrap()
         ) ; "max_players_is_5_and_given_2players"
     )]
@@ -307,7 +307,7 @@ mod tests {
                 WolfGroup::new(vec![Id::new("player3"),Id::new("player4"),Id::new("player5")], Word::try_new("foo2").unwrap()),
                 CitizenGroup::new(vec![Id::new("player6"),Id::new("player7"),Id::new("player2")], Word::try_new("hoge2").unwrap()),
                 VoteBox::new(vec![]),
-                TalkStatus::Started,
+                TalkStatus::Talking,
             ).unwrap()
         ) ; "max_players_is_6_and_given_3players"
     )]
@@ -350,7 +350,7 @@ mod tests {
                 WolfGroup::new(vec![Id::new("player2"),Id::new("player3")], Word::try_new("foo").unwrap()),
                 CitizenGroup::new(vec![Id::new("player4"),Id::new("player5"),Id::new("player1")], Word::try_new("hoge").unwrap()),
                 VoteBox::new(vec![]),
-                TalkStatus::Started,
+                TalkStatus::Talking,
             ).unwrap()
         ) ; "max_players_is_5_and_given_2players_return_multi_theme"
     )]
@@ -395,7 +395,7 @@ mod tests {
                     wolf_group,
                     citizen_group,
                     VoteBox::new(vec![]),
-                    TalkStatus::Started,
+                    TalkStatus::Talking,
                 ))
             },
         );

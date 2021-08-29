@@ -31,7 +31,8 @@ impl TalkMinutes {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum TalkStatus {
-    Started,
+    Talking,
+    Voting,
     Ended,
 }
 
@@ -73,8 +74,11 @@ impl Talk {
     }
 
     pub fn vote(&mut self, vote: Vote) -> DomainResult<VoteResult> {
-        if *self.status() == TalkStatus::Ended {
-            Err(DomainError::new(DomainErrorKind::Fail, "talk is ended"))
+        if *self.status() != TalkStatus::Voting {
+            Err(DomainError::new(
+                DomainErrorKind::Fail,
+                "talk status is not voting",
+            ))
         } else {
             self.vote_box = self.vote_box.new_with_added(vote)?;
             Ok(VoteResult::new(
@@ -183,7 +187,7 @@ mod tests {
         WolfGroup::new(vec![], Word::try_new("Test").unwrap()),
         CitizenGroup::new(vec![], Word::try_new("Test2").unwrap()),
         VoteBox::new(vec![]),
-        TalkStatus::Started
+        TalkStatus::Talking
      => Ok(Talk{
         id: Id::new("talk_1"),
         room_id:Id::new("room_1"),
@@ -192,7 +196,7 @@ mod tests {
         wolves:   WolfGroup::new(vec![], Word::try_new("Test").unwrap()),
         citizen:   CitizenGroup::new(vec![], Word::try_new("Test2").unwrap()),
         vote_box: VoteBox::new(vec![]),
-        status:TalkStatus::Started,
+        status:TalkStatus::Talking,
     }))]
     fn talk_try_new_works(
         id: Id<Talk>,
@@ -249,7 +253,7 @@ mod tests {
             WolfGroup::new(vec![Id::new("player1")], Word::try_new("word1").unwrap()),
             CitizenGroup::new(vec![Id::new("player2")], Word::try_new("word2").unwrap()),
             VoteBox::new(vec![]),
-            TalkStatus::Started,
+            TalkStatus::Voting,
         ),
         Vote::new(Id::new("player1"),Id::new("player2")),
         VoteBox::new(vec![Vote::new(Id::new("player1"),Id::new("player2"))])
@@ -264,7 +268,7 @@ mod tests {
             WolfGroup::new(vec![Id::new("player1")], Word::try_new("word1").unwrap()),
             CitizenGroup::new(vec![Id::new("player2")], Word::try_new("word2").unwrap()),
             VoteBox::new(vec![Vote::new(Id::new("player2"),Id::new("player1"))]),
-            TalkStatus::Started,
+            TalkStatus::Voting,
         ),
         Vote::new(Id::new("player1"),Id::new("player2")),
         VoteBox::new(vec![Vote::new(Id::new("player2"),Id::new("player1")),Vote::new(Id::new("player1"),Id::new("player2"))])
@@ -283,7 +287,7 @@ mod tests {
         ),
         Vote::new(Id::new("player1"),Id::new("player2")),
         VoteBox::new(vec![])
-        => Err(DomainError::new(DomainErrorKind::Fail, "talk is ended"));"talk is ended"
+        => Err(DomainError::new(DomainErrorKind::Fail, "talk status is not voting"));"talk status is not voting"
         )]
     #[test_case(
         Talk::new(
@@ -294,7 +298,7 @@ mod tests {
             WolfGroup::new(vec![Id::new("player1")], Word::try_new("word1").unwrap()),
             CitizenGroup::new(vec![Id::new("player2")], Word::try_new("word2").unwrap()),
             VoteBox::new(vec![Vote::new(Id::new("player1"),Id::new("player2"))]),
-            TalkStatus::Started,
+            TalkStatus::Voting,
         ),
         Vote::new(Id::new("player1"),Id::new("player2")),
         VoteBox::new(vec![Vote::new(Id::new("player1"),Id::new("player2"))])
