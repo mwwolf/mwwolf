@@ -7,8 +7,10 @@ use std::borrow::Borrow;
 use super::*;
 
 mod proto_api;
+mod theme;
 
 use proto_api::{api, Client, FromValue, IntoEntity, Key};
+pub use theme::*;
 
 mod id;
 
