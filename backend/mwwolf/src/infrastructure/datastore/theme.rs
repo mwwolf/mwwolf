@@ -1,16 +1,36 @@
 use super::*;
+use database::Connection as _;
+use database::ConnectionFactory as _;
 
-pub struct ThemeRepository<CF: database::ConnectionFactory> {
-    connection_factory: CF,
+#[derive(new)]
+pub struct ThemeRepository {
+    connection_factory: ConnectionFactory,
+    namespace: String,
 }
 
+impl ThemeRepository {
+    const DATA_STORE_KIND: &'static str = "theme";
+    const KIND_FIELD_NAME: &'static str = "kind";
+}
 #[async_trait]
-impl<CF: database::ConnectionFactory> domain::ThemeRepository for ThemeRepository<CF> {
+impl domain::ThemeRepository for ThemeRepository {
     async fn find_by_kind(
         &self,
-        _: &domain::ThemeKind,
+        kind: &domain::ThemeKind,
     ) -> domain::RepositoryResult<Vec<domain::Theme>> {
-        // query 生成
+        let query = proto_api::Query::new(Self::DATA_STORE_KIND)
+            .namespace(&self.namespace)
+            .filter(proto_api::Filter::Equal(
+                Self::KIND_FIELD_NAME.into(),
+                proto_api::Value::Strings(kind.raw_kind().into()),
+            ));
+        let conn = self
+            .connection_factory
+            .create()
+            .await
+            .map_err(to_repository_error)?;
+        // query 生成 -> DONE
+        // Connectionにquery実行する実装がなかったのでdatastore::Connectionにquery実行するメソッドを実装する
         // datastore Serch実行
         // オブジェクト変換
         todo!()

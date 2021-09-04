@@ -5,6 +5,12 @@ use rand::prelude::*;
 pub struct ThemeKind(String);
 
 impl ThemeKind {
+    pub fn raw_kind(&self) -> &str {
+        &self.0
+    }
+}
+
+impl ThemeKind {
     pub fn try_new(kind: impl Into<String>) -> DomainResult<Self> {
         let kind = kind.into();
         if kind.is_empty() {

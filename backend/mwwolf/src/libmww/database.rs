@@ -27,7 +27,7 @@ macro_rules! run_in_transaction {
 }
 
 #[async_trait]
-pub trait ConnectionFactory: std::marker::Sync {
+pub trait ConnectionFactory: std::marker::Sync + std::marker::Send {
     type Transaction: Transaction;
     type Connection: Connection<Transaction = Self::Transaction>;
 

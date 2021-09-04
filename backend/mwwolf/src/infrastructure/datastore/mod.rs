@@ -6,9 +6,11 @@ use std::borrow::Borrow;
 
 use super::*;
 
+mod convert_error;
 mod proto_api;
 mod theme;
 
+use convert_error::*;
 use proto_api::{api, Client, FromValue, IntoEntity, Key};
 pub use theme::*;
 
