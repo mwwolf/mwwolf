@@ -11,7 +11,7 @@ mod proto_api;
 mod theme;
 
 use convert_error::*;
-use proto_api::{api, Client, FromValue, IntoEntity, Key};
+use proto_api::{api, Client, Entity, FromValue, IntoEntity, Key, Query};
 pub use theme::*;
 
 mod id;
@@ -149,6 +149,10 @@ impl Connection {
         T: FromValue,
     {
         self.client.lock().await.get_all(keys, None).await
+    }
+
+    pub async fn query(&mut self, query: Query) -> Result<Vec<Entity>, proto_api::Error> {
+        self.client.lock().await.query(query).await
     }
 
     pub async fn put(&mut self, entity: impl IntoEntity) -> Result<Option<Key>, proto_api::Error> {
