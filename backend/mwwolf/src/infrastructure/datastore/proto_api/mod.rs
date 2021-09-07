@@ -26,3 +26,4 @@ pub use self::query::*;
 pub use self::value::*;
 
 pub type Error = error::Error;
+pub type ConvertError = error::ConvertError;

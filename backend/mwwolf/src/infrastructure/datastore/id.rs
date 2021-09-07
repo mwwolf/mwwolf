@@ -1,4 +1,4 @@
-// use super::{proto_api::*, *};
+use super::*;
 // pub async fn allocate_ids<T>(
 //     connection: &Connection,
 //     keys: &[Key],
@@ -20,9 +20,9 @@
 //         })
 // }
 //
-// fn key_to_id<T>(key: Key) -> domain::Id<T> {
-//     match key.get_id() {
-//         KeyID::IntID(id) => domain::Id::new(id.to_string()),
-//         id => panic!("unexpected id:{:?}", id),
-//     }
-// }
+pub fn key_to_id<T>(key: Key) -> domain::Id<T> {
+    match key.get_id() {
+        proto_api::KeyID::IntID(id) => domain::Id::new(id.to_string()),
+        id => panic!("unexpected id:{:?}", id),
+    }
+}

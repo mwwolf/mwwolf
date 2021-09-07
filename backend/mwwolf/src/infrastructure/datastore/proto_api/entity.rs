@@ -44,6 +44,9 @@ impl Entity {
 pub trait IntoEntity {
     fn into_entity(self) -> Result<Entity, ConvertError>;
 }
+pub trait FromEntity: Sized {
+    fn from_entity(e: Entity) -> Result<Self, ConvertError>;
+}
 
 impl IntoEntity for Entity {
     fn into_entity(self) -> Result<Entity, ConvertError> {

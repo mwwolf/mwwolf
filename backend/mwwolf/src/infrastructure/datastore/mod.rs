@@ -7,6 +7,7 @@ use std::borrow::Borrow;
 use super::*;
 
 mod convert_error;
+mod entity;
 mod proto_api;
 mod theme;
 
