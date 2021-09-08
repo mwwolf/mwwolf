@@ -31,7 +31,7 @@ pub enum Error {
     Auth(#[from] AuthError),
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum ConvertError {
     #[error("expected property `{0}` was missing")]
     MissingProperty(String),

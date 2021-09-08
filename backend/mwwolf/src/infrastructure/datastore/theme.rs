@@ -67,3 +67,59 @@ impl proto_api::FromEntity for domain::Theme {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::{collections::HashMap, iter::FromIterator};
+
+    use super::*;
+    use test_case::test_case;
+
+    fn new_theme(id: &str, kind: &str, first_word: &str, second_word: &str) -> domain::Theme {
+        domain::Theme::new(
+            domain::Id::new(id),
+            domain::ThemeKind::try_new(kind).unwrap(),
+            domain::Word::try_new(first_word).unwrap(),
+            domain::Word::try_new(second_word).unwrap(),
+        )
+    }
+
+    fn new_theme_entity(
+        id: i64,
+        theme_kind: &str,
+        first_word: &str,
+        second_word: &str,
+    ) -> proto_api::Entity {
+        let properties = HashMap::<_, _>::from_iter(
+            [
+                (ThemeFields::KIND, theme_kind),
+                (ThemeFields::FIRST, first_word),
+                (ThemeFields::SECOND, second_word),
+            ]
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect::<Vec<_>>(),
+        );
+        proto_api::Entity::new(
+            Key::new(ThemeRepository::DATA_STORE_KIND).id(id),
+            properties,
+        )
+        .unwrap()
+    }
+
+    #[test_case(
+        new_theme_entity(1, "kind_test", "first_word", "second_word")
+        =>
+        Ok(new_theme("1", "kind_test", "first_word", "second_word"))
+    )]
+    #[test_case(
+        new_theme_entity(2, "kind_test_2", "first_word_2", "second_word_2")
+        =>
+        Ok(new_theme("2", "kind_test_2", "first_word_2", "second_word_2"))
+    )]
+    fn domain_theme_from_entity_works(
+        entity: proto_api::Entity,
+    ) -> Result<domain::Theme, proto_api::ConvertError> {
+        domain::Theme::from_entity(entity)
+    }
+}

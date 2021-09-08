@@ -40,7 +40,7 @@ impl Word {
     }
 }
 
-#[derive(new, Getters, Clone)]
+#[derive(new, Getters, Clone, PartialEq, Debug)]
 pub struct Theme {
     id: Id<Theme>,
     kind: ThemeKind,
