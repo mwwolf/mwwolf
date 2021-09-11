@@ -40,6 +40,7 @@ libmww_macro = { path="../libmww_macro" }
 async-graphql-actix-web = { git="https://github.com/async-graphql/async-graphql.git", branch="actix-web-v4-beta" }
 actix-web = "4.0.0-beta.8"
 actix-rt = "2.2.0"
+nameof = "1.2.1"
 
 [dev-dependencies]
 test-case = "1.1.0"

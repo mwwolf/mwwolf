@@ -1,6 +1,4 @@
 use anyhow::anyhow;
-use async_std::sync::Arc;
-use async_std::sync::Mutex;
 // use libmww::database::Executor;
 use std::borrow::Borrow;
 
@@ -155,6 +153,7 @@ impl Connection {
     }
 
     pub async fn query<T: FromEntity>(&mut self, query: Query) -> Result<Vec<T>, proto_api::Error> {
+        let query = query.namespace(&self.namespace);
         let entities = self.client.lock().await.query(query).await?;
         entities
             .into_iter()

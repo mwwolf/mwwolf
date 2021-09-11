@@ -38,6 +38,10 @@ impl Word {
             Ok(Self(word))
         }
     }
+
+    pub fn raw(&self) -> &str {
+        &self.0
+    }
 }
 
 #[derive(new, Getters, Clone, PartialEq, Debug)]

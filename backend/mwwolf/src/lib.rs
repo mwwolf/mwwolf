@@ -30,5 +30,9 @@ extern crate async_trait;
 #[macro_use]
 extern crate async_graphql;
 
+#[macro_use]
+extern crate nameof;
+
+use async_std::sync::*;
 #[cfg(test)]
 use mockall::{automock, mock, predicate::*};
