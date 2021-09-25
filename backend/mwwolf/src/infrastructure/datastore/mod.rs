@@ -1,14 +1,19 @@
 use anyhow::anyhow;
-use async_std::sync::Arc;
-use async_std::sync::Mutex;
 // use libmww::database::Executor;
 use std::borrow::Borrow;
 
+use self::proto_api::FromEntity;
+
 use super::*;
 
+mod convert_error;
+mod entity;
 mod proto_api;
+mod theme;
 
-use proto_api::{api, Client, FromValue, IntoEntity, Key};
+use convert_error::*;
+use proto_api::{api, Client, FromValue, IntoEntity, Key, Query};
+pub use theme::*;
 
 mod id;
 
@@ -145,6 +150,16 @@ impl Connection {
         T: FromValue,
     {
         self.client.lock().await.get_all(keys, None).await
+    }
+
+    pub async fn query<T: FromEntity>(&mut self, query: Query) -> Result<Vec<T>, proto_api::Error> {
+        let query = query.namespace(&self.namespace);
+        let entities = self.client.lock().await.query(query).await?;
+        entities
+            .into_iter()
+            .map(T::from_entity)
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(proto_api::Error::Convert)
     }
 
     pub async fn put(&mut self, entity: impl IntoEntity) -> Result<Option<Key>, proto_api::Error> {
