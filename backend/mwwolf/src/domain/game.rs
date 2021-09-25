@@ -31,7 +31,7 @@ impl GameMinutes {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum GameStatus {
-    Gameing,
+    Talking,
     Voting,
     Ended,
 }
@@ -187,7 +187,7 @@ mod tests {
         WolfGroup::new(vec![], Word::try_new("Test").unwrap()),
         CitizenGroup::new(vec![], Word::try_new("Test2").unwrap()),
         VoteBox::new(vec![]),
-        GameStatus::Gameing
+        GameStatus::Talking
      => Ok(Game{
         id: Id::new("game_1"),
         room_id:Id::new("room_1"),
@@ -196,7 +196,7 @@ mod tests {
         wolves:   WolfGroup::new(vec![], Word::try_new("Test").unwrap()),
         citizen:   CitizenGroup::new(vec![], Word::try_new("Test2").unwrap()),
         vote_box: VoteBox::new(vec![]),
-        status:GameStatus::Gameing,
+        status:GameStatus::Talking,
     }))]
     fn game_try_new_works(
         id: Id<Game>,
