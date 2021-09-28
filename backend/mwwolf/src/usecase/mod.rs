@@ -12,9 +12,9 @@ pub type Result<T> = domain::DomainResult<T>;
 
 trait Room {
     fn create(&self, command: command::RoomCreate) -> Result<dto::Room>;
-    fn delete(&self, room_id: impl Into<String>) -> Result<()>;
+    fn delete(&self, room_id: &str) -> Result<()>;
     fn join(&self, command: command::RoomJoin) -> Result<dto::Room>;
-    fn leave(&self, palyer_id: impl Into<String>) -> Result<dto::Room>;
+    fn leave(&self, palyer_id: &str) -> Result<dto::Room>;
     fn start_game(&self, command: command::StartGame) -> Result<dto::Game>;
 }
 
