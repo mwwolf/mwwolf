@@ -27,9 +27,12 @@ impl GameMinutes {
     pub fn calc_ended_at(&self, started_at: &DateTime<Tz>) -> DateTime<Tz> {
         *started_at + self.0
     }
+    pub fn raw_minutes(&self) -> &Duration {
+        &self.0
+    }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, EnumString, ToString)]
 pub enum GameStatus {
     Talking,
     Voting,

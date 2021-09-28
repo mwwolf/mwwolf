@@ -137,3 +137,9 @@ mod inner {
         }
     }
 }
+
+impl<T> From<Id<T>> for String {
+    fn from(id: Id<T>) -> Self {
+        id.raw_id().to_owned()
+    }
+}
