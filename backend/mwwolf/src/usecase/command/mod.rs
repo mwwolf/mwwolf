@@ -19,3 +19,9 @@ pub struct RoomJoin {
     room_id: String,
     player_id: String,
 }
+
+#[derive(PartialEq, Debug, new, Getters)]
+pub struct Vote {
+    target: String,
+    voter: String,
+}
