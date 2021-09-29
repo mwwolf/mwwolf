@@ -249,8 +249,156 @@ mod tests {
             vote_box: VoteBox { votes: vec![] },
             status: domain::GameStatus::Voting.to_string(),
         })]
+    #[test_case(
+        domain::Game::new(
+            domain::Id::new("game2"),
+            domain::Id::new("room2"),
+            domain::Id::new("theme2"),
+            datetime(2020,3,4,3,23,2),
+            domain::WolfGroup::new(
+                vec![domain::Id::new("player2")],
+                domain::Word::try_new("hoge2").unwrap()),
+            domain::CitizenGroup::new(
+                vec![domain::Id::new("player3")],
+                domain::Word::try_new("fuga2").unwrap()),
+            domain::VoteBox::new(vec![]),
+            domain::GameStatus::Voting)
+        => Game {
+            id: "game2".into(),
+            room_id: "room2".into(),
+            theme_id: "theme2".into(),
+            ended_at: datetime(2020, 3, 4, 3, 23, 2),
+            wolves: Group {
+                players: vec!["player2".to_owned()],
+                word: "hoge2".to_owned(),
+            },
+            citizen: Group {
+                players: vec!["player3".to_owned()],
+                word: "fuga2".to_owned(),
+            },
+            vote_box: VoteBox { votes: vec![] },
+            status: domain::GameStatus::Voting.to_string(),
+        })]
     fn game_from_domain_works(d: domain::Game) -> Game {
         Game::from(d)
+    }
+
+    #[test_case(
+        domain::WolfGroup::new(
+            vec![domain::Id::new("player1")],
+            domain::Word::try_new("hoge1").unwrap(),
+        )
+        =>
+        Group {
+            players: vec!["player1".to_owned()],
+            word: "hoge1".to_owned(),
+        }
+    )]
+    #[test_case(
+        domain::WolfGroup::new(
+            vec![domain::Id::new("player2"), domain::Id::new("player3")],
+            domain::Word::try_new("hoge2").unwrap(),
+        )
+        =>
+        Group {
+            players: vec!["player2".to_owned(), "player3".to_owned()],
+            word: "hoge2".to_owned(),
+        }
+    )]
+    fn group_from_wolf_group_domain_works(d: domain::WolfGroup) -> Group {
+        Group::from(d)
+    }
+
+    #[test_case(
+        domain::CitizenGroup::new(
+            vec![domain::Id::new("player1")],
+            domain::Word::try_new("hoge1").unwrap(),
+        )
+        =>
+        Group {
+            players: vec!["player1".to_owned()],
+            word: "hoge1".to_owned(),
+        }
+    )]
+    #[test_case(
+        domain::CitizenGroup::new(
+            vec![domain::Id::new("player2"), domain::Id::new("player3")],
+            domain::Word::try_new("hoge2").unwrap(),
+        )
+        =>
+        Group {
+            players: vec!["player2".to_owned(), "player3".to_owned()],
+            word: "hoge2".to_owned(),
+        }
+    )]
+    fn group_from_citizen_group_domain_works(d: domain::CitizenGroup) -> Group {
+        Group::from(d)
+    }
+
+    #[test_case(
+        domain::Room::try_new(
+            domain::Id::new("room1"),
+            domain::PlayerCount::try_new(3).unwrap(),
+            domain::WolfCount::try_new(1).unwrap(),
+            domain::Id::new("player1"),
+            vec![
+                domain::Id::new("player1"),
+                domain::Id::new("player2"),
+                domain::Id::new("player3"),
+            ],
+            domain::GameMinutes::try_new(3).unwrap(),
+            domain::ThemeKind::try_new("kind1").unwrap(),
+        ).unwrap()
+        =>
+        Room {
+            id: "room1".to_owned(),
+            player_count: 3,
+            wolf_count: 1,
+            host_player_id: "player1".to_owned(),
+            all_players: vec![
+                "player1".to_owned(),
+                "player2".to_owned(),
+                "player3".to_owned(),
+            ],
+            game_time: chrono::Duration::minutes(3),
+            theme_kind: "kind1".to_owned(),
+        }
+    )]
+    #[test_case(
+        domain::Room::try_new(
+            domain::Id::new("room2"),
+            domain::PlayerCount::try_new(5).unwrap(),
+            domain::WolfCount::try_new(2).unwrap(),
+            domain::Id::new("player11"),
+            vec![
+                domain::Id::new("player11"),
+                domain::Id::new("player12"),
+                domain::Id::new("player13"),
+                domain::Id::new("player14"),
+                domain::Id::new("player15"),
+            ],
+            domain::GameMinutes::try_new(5).unwrap(),
+            domain::ThemeKind::try_new("kind2").unwrap(),
+        ).unwrap()
+        =>
+        Room {
+            id: "room2".to_owned(),
+            player_count: 5,
+            wolf_count: 2,
+            host_player_id: "player11".to_owned(),
+            all_players: vec![
+                "player11".to_owned(),
+                "player12".to_owned(),
+                "player13".to_owned(),
+                "player14".to_owned(),
+                "player15".to_owned(),
+            ],
+            game_time: chrono::Duration::minutes(5),
+            theme_kind: "kind2".to_owned(),
+        }
+    )]
+    fn room_from_domain_works(d: domain::Room) -> Room {
+        Room::from(d)
     }
 
     fn datetime(year: i32, month: u32, day: u32, hour: u32, min: u32, sec: u32) -> DateTime<Tz> {
