@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use chrono_tz::Tz;
 
-pub trait DateTimeGen {
+pub trait DateTimeGen: Send + Sync {
     fn now(&self) -> DateTime<Tz>;
 }
 

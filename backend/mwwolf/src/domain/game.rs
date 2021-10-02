@@ -101,7 +101,7 @@ impl Game {
 
 #[cfg_attr(test, automock)]
 #[async_trait]
-pub trait GameFactory {
+pub trait GameFactory: Send + Sync {
     async fn create(
         &self,
         room_id: Id<Room>,

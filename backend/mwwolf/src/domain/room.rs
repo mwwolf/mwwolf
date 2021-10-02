@@ -1,6 +1,5 @@
 use super::*;
 use rand::prelude::*;
-use std::cell::RefCell;
 use time::DateTimeGen;
 
 #[derive(Clone, Debug, PartialEq, Getters)]
@@ -155,39 +154,43 @@ pub trait RoomServiceTypeParameters {
     type GameFactory: GameFactory;
     type ThemeRepository: ThemeRepository;
     type DateTimeGen: time::DateTimeGen;
-    type RngCore: rand::RngCore;
+    type RngFactory: RngFactory;
+}
+#[async_trait]
+pub trait RoomService {
+    async fn start_game(&self, room: &Room) -> DomainResult<Game>;
 }
 
 #[derive(new)]
-pub struct RoomService<RST: RoomServiceTypeParameters> {
+pub struct RoomServiceImpl<RST: RoomServiceTypeParameters> {
     game_factory: RST::GameFactory,
     theme_repository: RST::ThemeRepository,
     date_time_gen: RST::DateTimeGen,
-    rng_core: RefCell<RST::RngCore>,
+    rng_factory: RST::RngFactory,
 }
 
-impl<RST: RoomServiceTypeParameters> RoomService<RST> {
-    pub async fn start_game(&self, room: &Room) -> DomainResult<Game> {
+#[async_trait]
+impl<RST: RoomServiceTypeParameters> RoomService for RoomServiceImpl<RST> {
+    async fn start_game(&self, room: &Room) -> DomainResult<Game> {
         match self.theme_repository.find_by_kind(room.theme_kind()).await {
             Ok(themes) => {
-                let theme = themes
-                    .choose(&mut *self.rng_core.borrow_mut())
-                    .ok_or_else(|| {
-                        DomainError::new(
-                            DomainErrorKind::Fail,
-                            format!(
-                                "themes of related of {:?} does not exists",
-                                room.theme_kind()
-                            ),
-                        )
-                    })?;
+                let mut rng_core = self.rng_factory.create();
+                let theme = themes.choose(&mut rng_core).ok_or_else(|| {
+                    DomainError::new(
+                        DomainErrorKind::Fail,
+                        format!(
+                            "themes of related of {:?} does not exists",
+                            room.theme_kind()
+                        ),
+                    )
+                })?;
                 let mut all_players = room.all_players().clone();
-                all_players.shuffle(&mut *self.rng_core.borrow_mut());
+                all_players.shuffle(&mut rng_core);
                 let wolfs = all_players
                     .drain(0..*room.wolf_count().raw_count())
                     .collect::<Vec<Id<Player>>>();
                 let citizen = all_players;
-                let (wolf_word, citizen_word) = theme.choice_word(&mut *self.rng_core.borrow_mut());
+                let (wolf_word, citizen_word) = theme.choice_word(&mut rng_core);
                 let wolf_group = WolfGroup::new(wolfs, wolf_word.clone());
                 let citizen_group = CitizenGroup::new(citizen, citizen_word.clone());
                 let ended_at = room.game_time().calc_ended_at(&self.date_time_gen.now());
@@ -220,7 +223,6 @@ mod tests {
     use crate::testmww::mock::mock_libmww::time;
     use chrono::*;
     use chrono_tz::*;
-    use rand::rngs::mock::StepRng;
 
     fn datetime(year: i32, month: u32, day: u32, hour: u32, min: u32, sec: u32) -> DateTime<Tz> {
         chrono_tz::Japan
@@ -234,7 +236,7 @@ mod tests {
         type ThemeRepository = MockThemeRepository;
         type GameFactory = MockGameFactory;
         type DateTimeGen = time::MockDateTimeGen;
-        type RngCore = rand::rngs::mock::StepRng;
+        type RngFactory = MockRngFactory;
     }
 
     #[test_case(
@@ -259,7 +261,7 @@ mod tests {
                 ),
             ]
         ),
-        StepRng::new(0, 1)
+        MockRngFactory::new(0, 1)
         =>
         Ok(
             Game::try_new(
@@ -296,7 +298,7 @@ mod tests {
                 ),
             ]
         ),
-        StepRng::new(0, 1)
+        MockRngFactory::new(0, 1)
         =>
         Ok(
             Game::try_new(
@@ -339,7 +341,7 @@ mod tests {
                 ),
             ]
         ),
-        StepRng::new(0, 1)
+        MockRngFactory::new(0, 1)
         =>
         Ok(
             Game::try_new(
@@ -367,7 +369,7 @@ mod tests {
         datetime(2021, 8, 11, 12, 30, 15),
         Id::new("game1"),
         Ok(vec![]),
-        StepRng::new(0, 1)
+        MockRngFactory::new(0, 1)
         =>
         Err(
             DomainError::new(DomainErrorKind::Fail, "themes of related of ThemeKind(\"theme_kind1\") does not exists")
@@ -379,7 +381,7 @@ mod tests {
         now: DateTime<Tz>,
         new_game_id: Id<Game>,
         return_themes_result: RepositoryResult<Vec<Theme>>,
-        step_rng: rand::rngs::mock::StepRng,
+        rng_factory: MockRngFactory,
     ) -> DomainResult<Game> {
         let mut mock_date_time_gen = time::MockDateTimeGen::new();
         mock_date_time_gen.expect_now().returning(move || now);
@@ -409,11 +411,11 @@ mod tests {
                 Ok(ref v) => Ok(v.clone()),
             });
 
-        let room_service = RoomService::<MockRoomServiceTypeParameter>::new(
+        let room_service = RoomServiceImpl::<MockRoomServiceTypeParameter>::new(
             mock_game_factory,
             mock_theme_repository,
             mock_date_time_gen,
-            RefCell::new(step_rng),
+            rng_factory,
         );
         room_service.start_game(&room).await
     }

@@ -3,6 +3,7 @@ mod game;
 mod id;
 mod player;
 mod result;
+mod rng_factory;
 mod room;
 mod theme;
 
@@ -19,3 +20,4 @@ pub use room::*;
 pub use theme::*;
 
 pub use result::{DomainResult, RepositoryResult};
+pub use rng_factory::*;

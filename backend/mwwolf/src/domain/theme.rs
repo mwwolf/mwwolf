@@ -64,7 +64,7 @@ impl Theme {
 
 #[cfg_attr(test, automock)]
 #[async_trait]
-pub trait ThemeRepository {
+pub trait ThemeRepository: Send + Sync {
     async fn find_by_kind(&self, kind: &ThemeKind) -> RepositoryResult<Vec<Theme>>;
 }
 
