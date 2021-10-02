@@ -1,12 +1,12 @@
 use crate::domain;
-#[derive(Getters, PartialEq, Debug)]
+#[derive(new, Getters, PartialEq, Debug)]
 pub struct Room {
     id: String,
     player_count: usize,
     wolf_count: usize,
     host_player_id: String,
     all_players: Vec<String>,
-    game_time: chrono::Duration,
+    game_time: u32,
     theme_kind: String,
 }
 
@@ -22,7 +22,7 @@ impl From<domain::Room> for Room {
                 .iter()
                 .map(|id| id.raw_id().to_owned())
                 .collect(),
-            game_time: room.game_time().raw_minutes().to_owned(),
+            game_time: room.game_time().num_minutes(),
             theme_kind: room.theme_kind().raw_kind().to_owned(),
         }
     }
@@ -360,7 +360,7 @@ mod tests {
                 "player2".to_owned(),
                 "player3".to_owned(),
             ],
-            game_time: chrono::Duration::minutes(3),
+            game_time: 3,
             theme_kind: "kind1".to_owned(),
         }
     )]
@@ -393,7 +393,7 @@ mod tests {
                 "player14".to_owned(),
                 "player15".to_owned(),
             ],
-            game_time: chrono::Duration::minutes(5),
+            game_time: 5,
             theme_kind: "kind2".to_owned(),
         }
     )]

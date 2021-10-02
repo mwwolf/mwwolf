@@ -156,8 +156,10 @@ pub trait RoomServiceTypeParameters {
     type DateTimeGen: time::DateTimeGen;
     type RngFactory: RngFactory;
 }
+
+#[cfg_attr(test, automock)]
 #[async_trait]
-pub trait RoomService {
+pub trait RoomService: Send + Sync {
     async fn start_game(&self, room: &Room) -> DomainResult<Game>;
 }
 
@@ -215,6 +217,25 @@ impl<RST: RoomServiceTypeParameters> RoomService for RoomServiceImpl<RST> {
             )),
         }
     }
+}
+
+#[cfg_attr(test, automock)]
+#[async_trait]
+pub trait RoomRepository: Send + Sync {
+    async fn store(&self, room: &Room) -> RepositoryResult<()>;
+}
+
+#[cfg_attr(test, automock)]
+#[async_trait]
+pub trait RoomFactory: Send + Sync {
+    async fn create(
+        &self,
+        player_count: PlayerCount,
+        wolf_count: WolfCount,
+        host_player_id: Id<Player>,
+        game_time: GameMinutes,
+        theme_kind: ThemeKind,
+    ) -> DomainResult<Room>;
 }
 
 #[cfg(test)]

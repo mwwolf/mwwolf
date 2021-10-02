@@ -1,11 +1,9 @@
-use chrono::*;
-
 #[derive(PartialEq, Debug, new, Getters)]
 pub struct RoomCreate {
     player_count: usize,
     wolf_count: usize,
     host_player_id: String,
-    game_minutes: Duration,
+    game_minutes: u32,
     theme_kind: String,
 }
 

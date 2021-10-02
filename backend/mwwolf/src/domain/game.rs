@@ -30,6 +30,9 @@ impl GameMinutes {
     pub fn raw_minutes(&self) -> &Duration {
         &self.0
     }
+    pub fn num_minutes(&self) -> u32 {
+        self.0.num_minutes() as u32
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, EnumString, ToString)]
