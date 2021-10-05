@@ -222,6 +222,7 @@ impl<RST: RoomServiceTypeParameters> RoomService for RoomServiceImpl<RST> {
 #[cfg_attr(test, automock)]
 #[async_trait]
 pub trait RoomRepository: Send + Sync {
+    async fn find(&self, id: &Id<Room>) -> RepositoryResult<Room>;
     async fn store(&self, room: &Room) -> RepositoryResult<()>;
     async fn delete(&self, id: &Id<Room>) -> RepositoryResult<()>;
 }

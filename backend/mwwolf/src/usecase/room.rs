@@ -69,8 +69,39 @@ impl<RST: RoomTypeParameters> Room for RoomImpl<RST> {
             .await?;
         Ok(())
     }
-    async fn join(&self, _: command::RoomJoin) -> Result<dto::Room> {
-        todo!()
+    async fn join(&self, join_command: command::RoomJoin) -> Result<dto::Room> {
+        let room_id = domain::Id::new(join_command.room_id());
+        let mut room = self
+            .repository
+            .find(&room_id)
+            .map_err(|e| match e.kind() {
+                domain::RepositoryErrorKind::NotFound => domain::DomainError::new_with_source(
+                    domain::DomainErrorKind::Notfound,
+                    format!("room(id {}) is not found", room_id),
+                    e.into(),
+                ),
+                _ => domain::DomainError::new_with_source(
+                    domain::DomainErrorKind::Fail,
+                    format!("failed to delete room(id {})", room_id),
+                    e.into(),
+                ),
+            })
+            .await?;
+
+        let new_player = domain::Id::new(join_command.player_id());
+        room.join_player(new_player)?;
+
+        self.repository
+            .store(&room)
+            .map_err(|e| {
+                domain::DomainError::new_with_source(
+                    domain::DomainErrorKind::Fail,
+                    format!("failed to store room: {:?}", room),
+                    e.into(),
+                )
+            })
+            .await?;
+        Ok(room.into())
     }
     async fn leave(&self, _: &str) -> Result<dto::Room> {
         todo!()
@@ -165,5 +196,65 @@ mod tests {
             mock_room_factory,
         );
         room_usecase.delete(id).await
+    }
+
+    #[test_case(
+        command::RoomJoin::new("room1".into(), "new_player1".into()),
+        domain::Id::new("room1"),
+        domain::Room::try_new(
+            domain::Id::new("room1"),
+            domain::PlayerCount::try_new(3).unwrap(),
+            domain::WolfCount::try_new(1).unwrap(),
+            domain::Id::new("host1"),
+            vec![domain::Id::new("player1")],
+            domain::GameMinutes::try_new(3).unwrap(),
+            domain::ThemeKind::try_new("kind1").unwrap(),
+        ).unwrap(),
+        domain::Room::try_new(
+            domain::Id::new("room1"),
+            domain::PlayerCount::try_new(3).unwrap(),
+            domain::WolfCount::try_new(1).unwrap(),
+            domain::Id::new("host1"),
+            vec![domain::Id::new("new_player1"), domain::Id::new("player1")],
+            domain::GameMinutes::try_new(3).unwrap(),
+            domain::ThemeKind::try_new("kind1").unwrap(),
+        ).unwrap()
+        =>
+        Ok(dto::Room::new(
+            "room1".into(),
+            3,
+            1,
+            "host1".into(),
+            vec!["new_player1".into(), "player1".into()],
+            3,
+            "kind1".into(),
+        ))
+    ; "success")]
+    #[async_std::test]
+    async fn join_room_ok_works(
+        join_command: command::RoomJoin,
+        expect_room_id: domain::Id<domain::Room>,
+        return_room: domain::Room,
+        expect_room_store: domain::Room,
+    ) -> Result<dto::Room> {
+        let mock_room_service = domain::MockRoomService::new();
+        let mut mock_room_repository = domain::MockRoomRepository::new();
+        let mock_room_factory = domain::MockRoomFactory::new();
+
+        mock_room_repository
+            .expect_find()
+            .with(predicate::eq(expect_room_id))
+            .returning(move |_| Ok(return_room.clone()));
+        mock_room_repository
+            .expect_store()
+            .with(predicate::eq(expect_room_store))
+            .returning(|_| Ok(()));
+
+        let room_usecase = RoomImpl::<MockParameters>::new(
+            mock_room_service,
+            mock_room_repository,
+            mock_room_factory,
+        );
+        room_usecase.join(join_command).await
     }
 }
