@@ -28,7 +28,7 @@ impl From<domain::Room> for Room {
     }
 }
 
-#[derive(Getters, PartialEq, Debug)]
+#[derive(new, Getters, PartialEq, Debug)]
 pub struct Game {
     id: String,
     room_id: String,
@@ -55,7 +55,7 @@ impl From<domain::Game> for Game {
     }
 }
 
-#[derive(Getters, PartialEq, Debug)]
+#[derive(new, Getters, PartialEq, Debug)]
 pub struct Group {
     players: Vec<String>,
     word: String,
@@ -87,7 +87,7 @@ impl From<domain::CitizenGroup> for Group {
     }
 }
 
-#[derive(Getters, PartialEq, Debug)]
+#[derive(new, Getters, PartialEq, Debug)]
 pub struct VoteBox {
     votes: Vec<Vote>,
 }

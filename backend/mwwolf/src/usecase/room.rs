@@ -3,6 +3,7 @@ use super::*;
 use async_graphql::futures_util::TryFutureExt;
 use domain::RoomFactory;
 use domain::RoomRepository;
+use domain::RoomService;
 
 #[async_trait]
 trait Room {
@@ -133,14 +134,36 @@ impl<RST: RoomTypeParameters> Room for RoomImpl<RST> {
         })?;
         Ok(room.into())
     }
-    async fn start_game(&self, _: command::StartGame) -> Result<dto::Game> {
-        todo!()
+    async fn start_game(&self, command: command::StartGame) -> Result<dto::Game> {
+        let room_id = domain::Id::new(command.room_id());
+        let room = self
+            .repository
+            .find(&room_id)
+            .await
+            .map_err(|e| match e.kind() {
+                domain::RepositoryErrorKind::NotFound => domain::DomainError::new_with_source(
+                    domain::DomainErrorKind::Notfound,
+                    format!("room(id {}) is not found", room_id),
+                    e.into(),
+                ),
+                _ => domain::DomainError::new_with_source(
+                    domain::DomainErrorKind::Fail,
+                    format!("failed find room(id {})", room_id),
+                    e.into(),
+                ),
+            })?;
+        let game = self.service.start_game(&room).await?;
+
+        Ok(game.into())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::DateTime;
+    use chrono::TimeZone;
+    use chrono_tz::Tz;
     use mockall::*;
     use test_case::test_case;
 
@@ -343,5 +366,73 @@ mod tests {
             mock_room_factory,
         );
         room_usecase.leave(leave_command).await
+    }
+
+    #[test_case(
+        command::StartGame::new("room1".into()),
+        domain::Id::new("room1"),
+        domain::Room::try_new(
+            domain::Id::new("room1"),
+            domain::PlayerCount::try_new(3).unwrap(),
+            domain::WolfCount::try_new(1).unwrap(),
+            domain::Id::new("host1"),
+            vec![domain::Id::new("leave_player1"),domain::Id::new("player1")],
+            domain::GameMinutes::try_new(3).unwrap(),
+            domain::ThemeKind::try_new("kind1").unwrap(),
+        ).unwrap(),
+        domain::Game::try_new(
+            domain::Id::new("game1"),
+            domain::Id::new("room1"),
+            domain::Id::new("theme1"),
+            datetime(2021,3,4,2,1,3),
+            domain::WolfGroup::new(vec![domain::Id::new("player1")], domain::Word::try_new("word1").unwrap()),
+            domain::CitizenGroup::new(vec![domain::Id::new("player2")], domain::Word::try_new("word2").unwrap()),
+            domain::VoteBox::new(vec![]),
+            domain::GameStatus::Talking,
+        ).unwrap()
+        =>
+        Ok(dto::Game::new(
+            "game1".into(),
+            "room1".into(),
+            "theme1".into(),
+            datetime(2021,3,4,2,1,3),
+            dto::Group::new(vec!["player1".into()],"word1".into()),
+            dto::Group::new(vec!["player2".into()],"word2".into()),
+            dto::VoteBox::new(vec![]),
+            "Talking".into(),
+        ))
+    ; "success")]
+    #[async_std::test]
+    async fn start_game_room_ok_works(
+        command: command::StartGame,
+        expect_room_id: domain::Id<domain::Room>,
+        return_room: domain::Room,
+        return_game: domain::Game,
+    ) -> Result<dto::Game> {
+        let mut mock_room_repository = domain::MockRoomRepository::new();
+        let mut mock_room_service = domain::MockRoomService::new();
+        let mock_room_factory = domain::MockRoomFactory::new();
+
+        let expected_room = return_room.clone();
+        mock_room_repository
+            .expect_find()
+            .with(predicate::eq(expect_room_id))
+            .returning(move |_| Ok(return_room.clone()));
+        mock_room_service
+            .expect_start_game()
+            .with(predicate::eq(expected_room))
+            .returning(move |_| Ok(return_game.clone()));
+
+        let room_usecase = RoomImpl::<MockParameters>::new(
+            mock_room_service,
+            mock_room_repository,
+            mock_room_factory,
+        );
+        room_usecase.start_game(command).await
+    }
+    fn datetime(year: i32, month: u32, day: u32, hour: u32, min: u32, sec: u32) -> DateTime<Tz> {
+        chrono_tz::Japan
+            .ymd(year, month, day)
+            .and_hms(hour, min, sec)
     }
 }
