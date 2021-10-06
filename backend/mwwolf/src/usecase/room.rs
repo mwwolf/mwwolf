@@ -9,7 +9,7 @@ trait Room {
     async fn create(&self, command: command::RoomCreate) -> Result<dto::Room>;
     async fn delete(&self, room_id: &str) -> Result<()>;
     async fn join(&self, command: command::RoomJoin) -> Result<dto::Room>;
-    async fn leave(&self, palyer_id: &str) -> Result<dto::Room>;
+    async fn leave(&self, command: command::RoomLeave) -> Result<dto::Room>;
     async fn start_game(&self, command: command::StartGame) -> Result<dto::Game>;
 }
 
@@ -103,8 +103,35 @@ impl<RST: RoomTypeParameters> Room for RoomImpl<RST> {
             .await?;
         Ok(room.into())
     }
-    async fn leave(&self, _: &str) -> Result<dto::Room> {
-        todo!()
+    async fn leave(&self, command: command::RoomLeave) -> Result<dto::Room> {
+        let room_id = domain::Id::new(command.room_id());
+        let mut room = self
+            .repository
+            .find(&room_id)
+            .await
+            .map_err(|e| match e.kind() {
+                domain::RepositoryErrorKind::NotFound => domain::DomainError::new_with_source(
+                    domain::DomainErrorKind::Notfound,
+                    format!("room(id {}) is not found", room_id),
+                    e.into(),
+                ),
+                _ => domain::DomainError::new_with_source(
+                    domain::DomainErrorKind::Fail,
+                    format!("failed find room(id {})", room_id),
+                    e.into(),
+                ),
+            })?;
+        let leave_plaeyr_id = domain::Id::new(command.player_id());
+        room.leave_player(&leave_plaeyr_id)?;
+
+        self.repository.store(&room).await.map_err(|e| {
+            domain::DomainError::new_with_source(
+                domain::DomainErrorKind::Fail,
+                format!("failed store room : {:?}", room),
+                e.into(),
+            )
+        })?;
+        Ok(room.into())
     }
     async fn start_game(&self, _: command::StartGame) -> Result<dto::Game> {
         todo!()
@@ -256,5 +283,65 @@ mod tests {
             mock_room_factory,
         );
         room_usecase.join(join_command).await
+    }
+
+    #[test_case(
+        command::RoomLeave::new("room1".into(), "leave_player1".into()),
+        domain::Id::new("room1"),
+        domain::Room::try_new(
+            domain::Id::new("room1"),
+            domain::PlayerCount::try_new(3).unwrap(),
+            domain::WolfCount::try_new(1).unwrap(),
+            domain::Id::new("host1"),
+            vec![domain::Id::new("leave_player1"),domain::Id::new("player1")],
+            domain::GameMinutes::try_new(3).unwrap(),
+            domain::ThemeKind::try_new("kind1").unwrap(),
+        ).unwrap(),
+        domain::Room::try_new(
+            domain::Id::new("room1"),
+            domain::PlayerCount::try_new(3).unwrap(),
+            domain::WolfCount::try_new(1).unwrap(),
+            domain::Id::new("host1"),
+            vec![domain::Id::new("player1")],
+            domain::GameMinutes::try_new(3).unwrap(),
+            domain::ThemeKind::try_new("kind1").unwrap(),
+        ).unwrap()
+        =>
+        Ok(dto::Room::new(
+            "room1".into(),
+            3,
+            1,
+            "host1".into(),
+            vec!["player1".into()],
+            3,
+            "kind1".into(),
+        ))
+    ; "success")]
+    #[async_std::test]
+    async fn leave_room_ok_works(
+        leave_command: command::RoomLeave,
+        expect_room_id: domain::Id<domain::Room>,
+        return_room: domain::Room,
+        expect_room_store: domain::Room,
+    ) -> Result<dto::Room> {
+        let mock_room_service = domain::MockRoomService::new();
+        let mut mock_room_repository = domain::MockRoomRepository::new();
+        let mock_room_factory = domain::MockRoomFactory::new();
+
+        mock_room_repository
+            .expect_find()
+            .with(predicate::eq(expect_room_id))
+            .returning(move |_| Ok(return_room.clone()));
+        mock_room_repository
+            .expect_store()
+            .with(predicate::eq(expect_room_store))
+            .returning(|_| Ok(()));
+
+        let room_usecase = RoomImpl::<MockParameters>::new(
+            mock_room_service,
+            mock_room_repository,
+            mock_room_factory,
+        );
+        room_usecase.leave(leave_command).await
     }
 }
