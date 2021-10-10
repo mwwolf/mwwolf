@@ -93,6 +93,14 @@ impl Game {
         }
     }
 
+    pub fn set_status(&mut self, new_status: GameStatus) -> DomainResult<()> {
+        let mut new_game = self.clone();
+        new_game.status = new_status;
+        new_game.validate()?;
+        *self = new_game;
+        Ok(())
+    }
+
     fn all_player_count(&self) -> usize {
         self.wolves.players().len() + self.citizen.players().len()
     }
