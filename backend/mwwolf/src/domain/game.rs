@@ -174,6 +174,13 @@ impl VoteBox {
     }
 }
 
+#[cfg_attr(test, automock)]
+#[async_trait]
+pub trait GameRepository: Send + Sync {
+    async fn find(&self, id: &Id<Game>) -> RepositoryResult<Game>;
+    async fn store(&self, game: &Game) -> RepositoryResult<()>;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

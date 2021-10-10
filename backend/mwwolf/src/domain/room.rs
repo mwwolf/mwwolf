@@ -155,6 +155,7 @@ pub trait RoomServiceTypeParameters {
     type ThemeRepository: ThemeRepository;
     type DateTimeGen: time::DateTimeGen;
     type RngFactory: RngFactory;
+    type GameRepsitory: GameRepository;
 }
 
 #[cfg_attr(test, automock)]
@@ -169,6 +170,7 @@ pub struct RoomServiceImpl<RST: RoomServiceTypeParameters> {
     theme_repository: RST::ThemeRepository,
     date_time_gen: RST::DateTimeGen,
     rng_factory: RST::RngFactory,
+    game_repository: RST::GameRepsitory,
 }
 
 #[async_trait]
@@ -197,7 +199,8 @@ impl<RST: RoomServiceTypeParameters> RoomService for RoomServiceImpl<RST> {
                 let citizen_group = CitizenGroup::new(citizen, citizen_word.clone());
                 let ended_at = room.game_time().calc_ended_at(&self.date_time_gen.now());
 
-                self.game_factory
+                let new_game = self
+                    .game_factory
                     .create(
                         room.id().clone(),
                         theme.id().clone(),
@@ -205,7 +208,16 @@ impl<RST: RoomServiceTypeParameters> RoomService for RoomServiceImpl<RST> {
                         wolf_group,
                         citizen_group,
                     )
-                    .await
+                    .await?;
+                self.game_repository.store(&new_game).await.map_err(|e| {
+                    DomainError::new_with_source(
+                        DomainErrorKind::Fail,
+                        "failed to store game",
+                        e.into(),
+                    )
+                })?;
+
+                Ok(new_game)
             }
             Err(err) => Err(DomainError::new_with_source(
                 DomainErrorKind::Fail,
@@ -246,6 +258,7 @@ mod tests {
     use crate::testmww::mock::mock_libmww::time;
     use chrono::*;
     use chrono_tz::*;
+    use mockall::predicate;
 
     fn datetime(year: i32, month: u32, day: u32, hour: u32, min: u32, sec: u32) -> DateTime<Tz> {
         chrono_tz::Japan
@@ -260,6 +273,7 @@ mod tests {
         type GameFactory = MockGameFactory;
         type DateTimeGen = time::MockDateTimeGen;
         type RngFactory = MockRngFactory;
+        type GameRepsitory = MockGameRepository;
     }
 
     #[test_case(
@@ -274,6 +288,16 @@ mod tests {
         ).unwrap(),
         datetime(2021, 8, 11, 12, 30, 15),
         Id::new("game1"),
+        Some(Game::try_new(
+            Id::new("game1"),
+            Id::new("room1"),
+            Id::new("theme1"),
+            datetime(2021, 8, 11, 12, 35, 15),
+            WolfGroup::new(vec![Id::new("player2"),Id::new("player3")], Word::try_new("foo").unwrap()),
+            CitizenGroup::new(vec![Id::new("player4"),Id::new("player5"),Id::new("player1")], Word::try_new("hoge").unwrap()),
+            VoteBox::new(vec![]),
+            GameStatus::Talking,
+        ).unwrap()),
         Ok(
             vec![
                 Theme::new(
@@ -311,6 +335,16 @@ mod tests {
         ).unwrap(),
         datetime(2022, 8, 11, 12, 30, 15),
         Id::new("game2"),
+        Some(Game::try_new(
+            Id::new("game2"),
+            Id::new("room2"),
+            Id::new("theme2"),
+            datetime(2022, 8, 11, 12, 36, 15),
+            WolfGroup::new(vec![Id::new("player3"),Id::new("player4"),Id::new("player5")], Word::try_new("foo2").unwrap()),
+            CitizenGroup::new(vec![Id::new("player6"),Id::new("player7"),Id::new("player2")], Word::try_new("hoge2").unwrap()),
+            VoteBox::new(vec![]),
+            GameStatus::Talking,
+        ).unwrap()),
         Ok(
             vec![
                 Theme::new(
@@ -348,6 +382,16 @@ mod tests {
         ).unwrap(),
         datetime(2021, 8, 11, 12, 30, 15),
         Id::new("game1"),
+        Some(Game::try_new(
+            Id::new("game1"),
+            Id::new("room1"),
+            Id::new("theme1"),
+            datetime(2021, 8, 11, 12, 35, 15),
+            WolfGroup::new(vec![Id::new("player2"),Id::new("player3")], Word::try_new("foo").unwrap()),
+            CitizenGroup::new(vec![Id::new("player4"),Id::new("player5"),Id::new("player1")], Word::try_new("hoge").unwrap()),
+            VoteBox::new(vec![]),
+            GameStatus::Talking,
+        ).unwrap()),
         Ok(
             vec![
                 Theme::new(
@@ -391,6 +435,7 @@ mod tests {
         ).unwrap(),
         datetime(2021, 8, 11, 12, 30, 15),
         Id::new("game1"),
+        None,
         Ok(vec![]),
         MockRngFactory::new(0, 1)
         =>
@@ -403,6 +448,7 @@ mod tests {
         room: Room,
         now: DateTime<Tz>,
         new_game_id: Id<Game>,
+        expect_store_game: Option<Game>,
         return_themes_result: RepositoryResult<Vec<Theme>>,
         rng_factory: MockRngFactory,
     ) -> DomainResult<Game> {
@@ -434,11 +480,19 @@ mod tests {
                 Ok(ref v) => Ok(v.clone()),
             });
 
+        let mut mock_game_repository = MockGameRepository::new();
+        let mut mock_game_repository_expect = mock_game_repository.expect_store();
+        if let Some(game) = expect_store_game {
+            mock_game_repository_expect = mock_game_repository_expect.with(predicate::eq(game));
+        }
+        mock_game_repository_expect.returning(|_| Ok(()));
+
         let room_service = RoomServiceImpl::<MockRoomServiceTypeParameter>::new(
             mock_game_factory,
             mock_theme_repository,
             mock_date_time_gen,
             rng_factory,
+            mock_game_repository,
         );
         room_service.start_game(&room).await
     }
